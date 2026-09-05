@@ -21,7 +21,7 @@ import random
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.enums import ContractState, EmployeeType, LeaveUnit, RequestState, Role
@@ -450,6 +450,12 @@ SEED_ALLOCATIONS: list[tuple[str, str, str, date, date]] = [
 # Leave for the generated half of the company.
 SEED_ALLOCATIONS += _GEN_ALLOCATIONS
 
+# Compensatory Off granted to every employee, so the hour-unit leave path
+# has a balance to spend and to refuse against. Applied in seed_leave().
+COMP_OFF_HOURS = Decimal("12")
+COMP_VALID_FROM = date(2026, 1, 1)
+COMP_VALID_TO = date(2026, 12, 31)
+
 
 def seed_users(db: Session) -> None:
     for email, full_name, role in SEED_USERS:
@@ -733,6 +739,15 @@ def seed_attendance(db: Session, employees: dict[str, Employee]) -> None:
 
 
 def seed_leave(db: Session, employees: dict[str, Employee]) -> None:
+    """Seed leave types, allocations and a spread of requests.
+
+    Idempotent: every row is looked up before it is written, so re-running
+    the seed tops the demo data up rather than duplicating it.
+
+    Args:
+        db: Open session. Flushed, not committed.
+        employees: Seeded employees keyed by work email.
+    """
     types: dict[str, TimeOffType] = {}
     for code, name, unit, is_paid, requires_allocation, color in SEED_LEAVE_TYPES:
         row = db.scalar(select(TimeOffType).where(TimeOffType.code == code))
@@ -770,6 +785,33 @@ def seed_leave(db: Session, employees: dict[str, Employee]) -> None:
         row.state = RequestState.APPROVED
     db.flush()
 
+    # Compensatory Off for everyone, stored as days like every other
+    # allocation - the ledger is in days and the API converts back to hours.
+    # The divisor is per employee: 12 hours is 1.5 days on a 40h week but 3
+    # days on the 20h part-time one, so a flat day figure would short them.
+    for employee in employees.values():
+        per_day = leave_engine.daily_hours_for(db, employee, COMP_VALID_FROM)
+        if per_day <= 0:
+            continue
+        row = db.scalar(
+            select(LeaveAllocation).where(
+                LeaveAllocation.employee_id == employee.id,
+                LeaveAllocation.time_off_type_id == types["COMP"].id,
+                LeaveAllocation.validity_from == COMP_VALID_FROM,
+            )
+        )
+        if row is None:
+            row = LeaveAllocation(
+                employee_id=employee.id,
+                time_off_type_id=types["COMP"].id,
+                validity_from=COMP_VALID_FROM,
+            )
+            db.add(row)
+        row.days = (COMP_OFF_HOURS / per_day).quantize(Decimal("0.01"))
+        row.validity_to = COMP_VALID_TO
+        row.state = RequestState.APPROVED
+    db.flush()
+
     # A handful of requests across states, all in the recent past so they
     # overlap the seeded attendance window and show up in the pay basis.
     today = date.today()
@@ -787,11 +829,20 @@ def seed_leave(db: Session, employees: dict[str, Employee]) -> None:
     ]
 
     approver = db.scalar(select(User).where(User.email == "hr.manager@paypulse.app"))
-    created = 0
     for email, code, start_ago, end_ago, state in plan:
         employee = employees[email]
         date_from = today - timedelta(days=start_ago)
         date_to = today - timedelta(days=end_ago)
+        # Nudge onto a weekday: a weekend-only span has no working days and
+        # would be refused.
+        #
+        # Must run *before* the already-seeded check below. The row is stored
+        # under the nudged date, so checking the raw one never matched for a
+        # weekend request and every re-run seeded another copy.
+        while date_from.weekday() >= 5:
+            date_from += timedelta(days=1)
+        while date_to < date_from or date_to.weekday() >= 5:
+            date_to += timedelta(days=1)
         if db.scalar(
             select(TimeOffRequest).where(
                 TimeOffRequest.employee_id == employee.id,
@@ -799,13 +850,6 @@ def seed_leave(db: Session, employees: dict[str, Employee]) -> None:
             )
         ):
             continue
-        # Nudge onto a weekday: a span landing entirely on a weekend has no
-        # working days and would be refused. A bare `except: continue` here
-        # previously hid two requests that never got seeded at all.
-        while date_from.weekday() >= 5:
-            date_from += timedelta(days=1)
-        while date_to < date_from or date_to.weekday() >= 5:
-            date_to += timedelta(days=1)
         try:
             days, hours = leave_engine.compute_duration(
                 db, employee, types[code], date_from, date_to
@@ -830,13 +874,14 @@ def seed_leave(db: Session, employees: dict[str, Employee]) -> None:
                 ),
             )
         )
-        created += 1
     db.flush()
     logger.info(
         "  leave              %d types, %d allocations, %d requests",
         len(SEED_LEAVE_TYPES),
-        len(SEED_ALLOCATIONS),
-        created,
+        # Counted, not len(SEED_ALLOCATIONS): the Compensatory Off grant is
+        # generated per employee, so the static length under-reports it.
+        db.scalar(select(func.count()).select_from(LeaveAllocation)),
+        db.scalar(select(func.count()).select_from(TimeOffRequest)),
     )
 
 

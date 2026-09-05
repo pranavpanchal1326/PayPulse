@@ -6,6 +6,7 @@ balance, and it is refused if it would overdraw one.
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query, status
@@ -13,7 +14,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.deps import AccessContext, DbSession, require
-from app.core.enums import RequestState
+from app.core.enums import LeaveUnit, RequestState
 from app.core.errors import (
     BusinessRuleError,
     ConflictError,
@@ -241,8 +242,42 @@ def get_balances(
     employee_id: Annotated[int | None, Query()] = None,
     on: Annotated[date | None, Query(description="Defaults to today")] = None,
 ) -> list[BalanceOut]:
+    """List one employee's balance for every active leave type.
+
+    Balances are stored in days for all types, because days are what payroll
+    consumes and what the over-balance guard checks a request against. Types
+    measured in HOURS are converted back to hours here, at the edge, so the
+    number the meter shows matches the unit it is labelled with.
+
+    Args:
+        employee_id: Whose balances to read. Defaults to the caller.
+        on: Date the balance is valid for. Defaults to today.
+
+    Returns:
+        One BalanceOut per active leave type.
+    """
     target = _resolve_employee(ctx, employee_id)
-    _employee_or_404(db, target)
+    employee = _employee_or_404(db, target)
+
+    # Converting inside balances() instead would hand the over-balance guard
+    # hours to compare against a request in days, and it would approve past
+    # zero. The conversion belongs here and only here.
+    per_day = leave_engine.daily_hours_for(db, employee, on or date.today())
+
+    def shown(value: Decimal, unit: LeaveUnit) -> Decimal:
+        """Present one figure in its type's own unit.
+
+        Args:
+            value: The figure in days, as the engine stores it.
+            unit: The leave type's unit.
+
+        Returns:
+            Hours for HOURS types, otherwise the value unchanged.
+        """
+        if unit is LeaveUnit.HOURS and per_day > 0:
+            return (value * per_day).quantize(Decimal("0.01"))
+        return value
+
     return [
         BalanceOut(
             time_off_type_id=b.time_off_type_id,
@@ -251,11 +286,11 @@ def get_balances(
             unit=b.unit,
             is_paid=b.is_paid,
             requires_allocation=b.requires_allocation,
-            allocated=b.allocated,
-            taken=b.taken,
-            pending=b.pending,
-            remaining=b.remaining,
-            projected_remaining=b.projected_remaining,
+            allocated=shown(b.allocated, b.unit),
+            taken=shown(b.taken, b.unit),
+            pending=shown(b.pending, b.unit),
+            remaining=shown(b.remaining, b.unit),
+            projected_remaining=shown(b.projected_remaining, b.unit),
             validity_from=b.validity_from,
             validity_to=b.validity_to,
         )
