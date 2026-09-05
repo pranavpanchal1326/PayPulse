@@ -6,7 +6,7 @@
 
 **Version 3.0** · supersedes v2 and v1 (v1 archived at `docs/PRD-v1.md`, git `b618137`)
 Team: **Aditya** (backend) · **Pranav** (frontend) · Odoo Hackathon · ~36–48h build window
-Status: **B0 through B4 shipped — the whole pay basis now exists.** B0 = scaffold, Compose, JWT, RBAC (`99bfacc`). B1 = org master data, schedules, the Employee hub (`d9bc2d3`). B2 = contracts + exclusion constraint + resolver (`8e38ee0`). B2.5 = `calendar.py` and holidays (`5b6a959`). B3 = attendance, midnight-safe hours, derived absence (`6bf0c05`). B4 = time off types, allocations, requests, schedule-aware durations and the paid/unpaid split. **B5 — the payroll engine — is next, and is the longest pole.**
+Status: **The backend is complete — B0 through B10 shipped.** 19 tables, 55 endpoints, 446 unit tests and 366 API assertions across six smoke suites. The engine computes ordered salary rules against a pay basis derived from contracts, schedules, holidays, attendance and leave; payruns move DRAFT → COMPUTED → VALIDATED → PAID with warnings gating each transition; payslips render as real PDFs and email in bulk; the dashboard aggregates live. **Next: the frontend, and scaling the seed for the demo (§9).**
 
 ---
 
@@ -811,12 +811,12 @@ Pranav then builds against **MSW mocks** derived from those types. **Result: Pra
 | B2.5 | **`calendar.py`** — holidays + `period_days` / `contract_days` | 1.5 | ⭐ every day number comes from here |
 | ~~B3~~ | ~~Attendance + derived status + `worked_hours` (midnight-safe) + manual-edit fields~~ | ~~3~~ | ✅ **shipped** — `ABSENT` dropped; 41 unit tests + 67 API assertions |
 | ~~B4~~ | ~~TimeOffType, Allocation, Request, `leave_engine` (schedule-aware duration, block-on-over-balance, cancel)~~ | ~~4~~ | ✅ **shipped** — 17 unit tests + 79 API assertions |
-| B5 | **`formula.py` sandbox + `payroll_engine.py` + `time_basis.py`** | 6 | ⚠ longest pole — start by hr 10 |
-| B6 | SalaryStructure / Rule CRUD + reorder + validate-formula + forward-ref check | 3 | |
-| B7 | Payrun lifecycle (compute/validate/mark-paid/reopen/cancel), eligible-employees preview, warnings engine | 4.5 | |
-| B8 | Payslip PDF (WeasyPrint + Jinja2) + bulk email attachment | 3 | |
-| B9 | Dashboard aggregation with the §5 KPI formulas + role filtering | 3 | |
-| B10 | **Seed script** | 3 | §9 — do not skip |
+| ~~B5~~ | ~~**`formula.py` sandbox + `payroll_engine.py` + `time_basis.py`**~~ | ~~6~~ | ✅ **shipped** — 77 unit tests |
+| ~~B6~~ | ~~SalaryStructure / Rule CRUD + reorder + validate-formula + forward-ref check~~ | ~~3~~ | ✅ **shipped** |
+| ~~B7~~ | ~~Payrun lifecycle (compute/validate/mark-paid/reopen/cancel), eligible-employees preview, warnings engine~~ | ~~4.5~~ | ✅ **shipped** |
+| ~~B8~~ | ~~Payslip PDF (WeasyPrint + Jinja2) + bulk email attachment~~ | ~~3~~ | ✅ **shipped** — real PDFs, 5 land in Mailpit |
+| ~~B9~~ | ~~Dashboard aggregation with the §5 KPI formulas + role filtering~~ | ~~3~~ | ✅ **shipped** |
+| ~~B10~~ | ~~**Seed script**~~ | ~~3~~ | ✅ **shipped** — rules + 6 historical payruns. Scaling to 30 employees still outstanding (§9). |
 
 **≈37.5h backend** — roughly v1's budget, with every correctness fix included. *(v2 was ≈48h: the cuts in §1.5 returned ~11 hours.)*
 

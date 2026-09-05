@@ -170,6 +170,14 @@ def _request_source():
     return TimeOffRequest, TimeOffRequest.employee_id
 
 
+def _payslip_source():
+    try:
+        from app.models.payroll import Payslip
+    except ImportError:
+        return None, None
+    return Payslip, Payslip.employee_id
+
+
 def _allocation_source():
     try:
         from app.models.timeoff import LeaveAllocation
@@ -185,4 +193,5 @@ _SUMMARY_SOURCES = {
     "attendances": _attendance_source,
     "time_off_requests": _request_source,
     "allocations": _allocation_source,
+    "payslips": _payslip_source,
 }

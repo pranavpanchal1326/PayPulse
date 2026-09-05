@@ -63,6 +63,7 @@ def login(email):
     ]
 
 
+
 def balance_of(token, employee_id, code):
     for b in call("GET", f"/time-off/balances?employee_id={employee_id}", token):
         if b["type_code"] == code:

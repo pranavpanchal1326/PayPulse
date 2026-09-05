@@ -25,6 +25,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.enums import ContractState, EmployeeType, LeaveUnit, RequestState, Role
+from app.core.errors import BusinessRuleError
 from app.core.security import hash_password
 from app.models.attendance import Attendance
 from app.models.contract import Contract
@@ -142,9 +143,11 @@ WITHOUT_BANK_DETAILS = {"employee@paypulse.app"}
 # (user email, wage, start, end, state) - several employees carry history so
 # period-based selection has something to select between.
 #
-# Sneha's pair is the demo beat: a raise on 16 Sep 2026 leaves two adjacent
+# Sneha's pair is the demo beat: a raise on 16 Jul 2026 leaves two adjacent
 # RUNNING contracts. They do not overlap, so the exclusion constraint allows
-# both, and the resolver picks the later one and warns. PRD v1 would have
+# both, and the resolver picks the later one and warns. The date sits in a
+# completed month so the payrun has real attendance to work from. PRD v1
+# would have
 # refused to pay her at all.
 SEED_CONTRACTS: list[tuple[str, str, date, date | None, ContractState]] = [
     ("admin@paypulse.app", "95000.00", date(2021, 4, 1), None, ContractState.RUNNING),
@@ -166,11 +169,11 @@ SEED_CONTRACTS: list[tuple[str, str, date, date | None, ContractState]] = [
     ),
     (
         "employee@paypulse.app", "40000.00",
-        date(2023, 6, 5), date(2026, 9, 15), ContractState.RUNNING,
+        date(2023, 6, 5), date(2026, 7, 15), ContractState.RUNNING,
     ),
     (
         "employee@paypulse.app", "55000.00",
-        date(2026, 9, 16), None, ContractState.RUNNING,
+        date(2026, 7, 16), None, ContractState.RUNNING,
     ),
 ]
 
@@ -204,7 +207,10 @@ SEED_HOLIDAYS: list[tuple[date, str, bool]] = [
 # it), so a hardcoded window would rot within days. The exception pattern is
 # seeded from a fixed RNG seed, so the *shape* of the data - which days are
 # late, absent, or missing a check-out - is identical on every run.
-ATTENDANCE_DAYS = 60
+# Must cover the historical payrun window (6 months): a month with no
+# attendance reads as 100% absent, which charges a full month of LWP and
+# produces a negative net the engine correctly refuses to validate.
+ATTENDANCE_DAYS = 200
 ATTENDANCE_RNG_SEED = 20260101
 
 # Deliberate exception rates, so the dashboard has something to report and
@@ -561,8 +567,10 @@ def seed_leave(db: Session, employees: dict[str, Employee]) -> None:
         ("employee@paypulse.app", "LWP", 16, 16, RequestState.APPROVED),
         ("payroll.user@paypulse.app", "SL", 12, 11, RequestState.APPROVED),
         ("payroll.manager@paypulse.app", "AL", 8, 7, RequestState.APPROVED),
-        ("employee@paypulse.app", "AL", -14, -12, RequestState.TO_APPROVE),
-        ("payroll.user@paypulse.app", "AL", -21, -21, RequestState.REFUSED),
+        # Future-dated, so they stay pending/refused rather than being
+        # swallowed. Negative "days ago" means days ahead.
+        ("employee@paypulse.app", "AL", -12, -14, RequestState.TO_APPROVE),
+        ("payroll.user@paypulse.app", "CL", -19, -19, RequestState.REFUSED),
     ]
 
     approver = db.scalar(select(User).where(User.email == "hr.manager@paypulse.app"))
@@ -578,13 +586,19 @@ def seed_leave(db: Session, employees: dict[str, Employee]) -> None:
             )
         ):
             continue
+        # Nudge onto a weekday: a span landing entirely on a weekend has no
+        # working days and would be refused. A bare `except: continue` here
+        # previously hid two requests that never got seeded at all.
+        while date_from.weekday() >= 5:
+            date_from += timedelta(days=1)
+        while date_to < date_from or date_to.weekday() >= 5:
+            date_to += timedelta(days=1)
         try:
             days, hours = leave_engine.compute_duration(
                 db, employee, types[code], date_from, date_to
             )
-        except Exception:
-            # A span that lands entirely on weekends or holidays; skip it
-            # rather than seeding a request with no working days.
+        except BusinessRuleError as exc:
+            logger.warning("  leave request skipped (%s %s): %s", email, code, exc)
             continue
         db.add(
             TimeOffRequest(
@@ -616,6 +630,7 @@ def seed_leave(db: Session, employees: dict[str, Employee]) -> None:
 def main() -> None:
     # Imported lazily so the module-level fixtures can be introspected by
     # tests without constructing an engine (and therefore needing psycopg).
+    from app.db import seed_payroll
     from app.db.session import SessionLocal
 
     logger.info("Seeding PayPulse demo data")
@@ -629,6 +644,9 @@ def main() -> None:
         seed_holidays(db)
         seed_attendance(db, employees)
         seed_leave(db, employees)
+
+        structure = seed_payroll.seed_structure(db)
+        seed_payroll.seed_payruns(db, structure)
         db.commit()
     logger.info("Done. All demo accounts use the password: %s", DEMO_PASSWORD)
 

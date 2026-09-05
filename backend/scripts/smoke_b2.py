@@ -59,6 +59,7 @@ def login(email):
     ]
 
 
+
 print("B2 smoke test\n")
 hr = login("hr.manager@paypulse.app")
 emp = login("employee@paypulse.app")
@@ -182,7 +183,7 @@ check(len(res["candidates"]) == 2, "both candidates reported")
 print("\nresolver: the seeded mid-month raise (Sneha, Sep 2026)")
 res = call(
     "GET",
-    "/contracts/resolve?employee_id=5&period_start=2026-09-01&period_end=2026-09-30",
+    "/contracts/resolve?employee_id=5&period_start=2026-07-01&period_end=2026-07-31",
     hr,
 )
 codes = [w["code"] for w in res["warnings"]]

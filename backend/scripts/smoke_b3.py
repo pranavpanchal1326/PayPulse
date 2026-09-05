@@ -61,6 +61,7 @@ def login(email):
     ]
 
 
+
 def ist(d: date, hh: int, mm: int = 0) -> str:
     return datetime(d.year, d.month, d.day, hh, mm, tzinfo=IST).isoformat()
 
@@ -316,16 +317,19 @@ check(gap["coverage_pct"] == 0.0, "coverage 0%")
 check(gap["absence_policy"] == "TREAT_AS_UNPAID", "policy reported")
 
 print("\nseeded data has realistic exceptions")
-window_start = date.today() - timedelta(days=59)
+window_start = date.today() - timedelta(days=180)
 window_end = date.today() - timedelta(days=1)
 seeded = call(
     "GET",
-    f"/attendances/overview?employee_id=5"
+    f"/attendances/overview?employee_id=4"
     f"&period_start={window_start}&period_end={window_end}",
     hr,
 )
 check(seeded["days_with_records"] > 20, f"{seeded['days_with_records']} records")
-check(seeded["absent_days"] > 0, f"{seeded['absent_days']} derived absences")
+check(
+    seeded["absent_days"] > 0,
+    f"{seeded['absent_days']} derived absences over the seeded window",
+)
 check(
     seeded["missing_checkouts"] > 0,
     f"{seeded['missing_checkouts']} missing check-outs",

@@ -104,10 +104,19 @@ class PayrunState(StrEnum):
 
 
 class PayslipState(StrEnum):
+    """Follows the parent payrun, except CANCELLED.
+
+    CANCELLED may be set on a single payslip to drop one employee from a
+    DRAFT or COMPUTED run (PRD section 3.9). It is also what the partial
+    unique index excludes, so a cancelled payslip frees that employee's
+    period for another payrun.
+    """
+
     DRAFT = "DRAFT"
     COMPUTED = "COMPUTED"
     VALIDATED = "VALIDATED"
     PAID = "PAID"
+    CANCELLED = "CANCELLED"
 
 
 class WarningSeverity(StrEnum):
@@ -147,3 +156,6 @@ class WarningCode(StrEnum):
     # --- payout (B7) ---
     MISSING_BANK_DETAILS = "MISSING_BANK_DETAILS"
     RECOMPUTE_REQUIRED = "RECOMPUTE_REQUIRED"
+    # Payroll for a period that has not finished yet: days after today have
+    # no attendance, so they read as absence and deduct a full day of pay.
+    FUTURE_PERIOD = "FUTURE_PERIOD"

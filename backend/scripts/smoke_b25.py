@@ -43,7 +43,7 @@ with SessionLocal() as db:
     check(sneha is not None and imran is not None, "seeded employees found")
 
     print("\nholidays load from the database")
-    sep = calendar.holiday_dates(db, date(2026, 9, 1), date(2026, 9, 30))
+    sep = calendar.holiday_dates(db, date(2026, 7, 1), date(2026, 7, 31))
     check(len(sep) == 0, f"September 2026 has no seeded holidays ({len(sep)})")
 
     oct_ = calendar.holiday_dates(db, date(2026, 10, 1), date(2026, 10, 31))
@@ -118,25 +118,28 @@ with SessionLocal() as db:
 
     print("\ncontract_days: proration off the resolved contract")
     resolution = contract_resolver.resolve(
-        db, sneha.id, date(2026, 9, 1), date(2026, 9, 30)
+        db, sneha.id, date(2026, 7, 1), date(2026, 7, 31)
     )
     check(
         str(resolution.contract.wage) == "55000.00",
-        "Sneha's Sep payrun resolves to the post-raise contract",
+        "Sneha's July payrun resolves to the post-raise contract",
     )
 
     sneha_basis = calendar.basis_for(
-        db, sneha, resolution.contract, date(2026, 9, 1), date(2026, 9, 30)
+        db, sneha, resolution.contract, date(2026, 7, 1), date(2026, 7, 31)
     )
-    check(sneha_basis.period_days == 22, "denominator is still the full month")
     check(
-        sneha_basis.contract_days == 11,
-        "the new contract covers 16-30 Sep = 11 working days",
+        sneha_basis.period_days == 23,
+        "denominator is still the full month (Jul 2026 = 23)",
+    )
+    check(
+        sneha_basis.contract_days == 12,
+        "the new contract covers 16-31 Jul",
         str(sneha_basis.contract_days),
     )
     check(sneha_basis.is_prorated, "flagged as prorated")
     check(
-        sneha_basis.contract_window_start == date(2026, 9, 16),
+        sneha_basis.contract_window_start == date(2026, 7, 16),
         "window starts the day of the raise",
     )
     check(
@@ -147,17 +150,17 @@ with SessionLocal() as db:
     print("\nthe old contract prorates to the other half of the month")
     old = next(c for c in resolution.candidates if str(c.wage) == "40000.00")
     old_basis = calendar.basis_for(
-        db, sneha, old, date(2026, 9, 1), date(2026, 9, 30)
+        db, sneha, old, date(2026, 7, 1), date(2026, 7, 31)
     )
     check(
         old_basis.contract_days == 11,
-        "1-15 Sep = 11 working days",
+        "1-15 Jul",
         str(old_basis.contract_days),
     )
     check(
         old_basis.contract_days + sneha_basis.contract_days
         == sneha_basis.period_days,
-        "the two halves of the raise sum to the full month (11 + 11 = 22)",
+        "the two halves of the raise sum to the full month",
     )
 
     print("\nschedule selection")

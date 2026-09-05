@@ -105,6 +105,10 @@ _HR_MANAGER: Matrix = {
     Resource.TIME_OFF_TYPE: Grant(_CRUD),
     Resource.TIME_OFF_REQUEST: Grant(_CRUDA),
     Resource.LEAVE_ALLOCATION: Grant(_CRUDA),
+    # Read-only, and the endpoint strips every money field for this role -
+    # spec page 3 says "no access to payroll features", but leaving an HR
+    # manager with no landing screen at all is bad product (PRD 6.1a).
+    Resource.DASHBOARD: Grant(_R),
 }
 
 # --- HR PAYROLL USER ---------------------------------------------------

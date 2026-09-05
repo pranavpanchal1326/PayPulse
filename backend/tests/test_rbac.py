@@ -76,10 +76,20 @@ class TestHrManager:
             Role.HR_MANAGER, Resource.TIME_OFF_REQUEST, Action.APPROVE
         )
 
-    @pytest.mark.parametrize("resource", PAYROLL_RESOURCES + [Resource.DASHBOARD])
+    @pytest.mark.parametrize("resource", PAYROLL_RESOURCES)
     @pytest.mark.parametrize("action", list(Action))
     def test_no_payroll_features(self, resource, action):
         assert not has_permission(Role.HR_MANAGER, resource, action)
+
+    def test_dashboard_is_read_only_and_money_free(self):
+        """Spec page 3 says "no access to payroll features", and B9 is the
+        *Payroll* Dashboard - but leaving this role with no landing screen
+        at all is bad product. Resolution (PRD 6.1a): read-only access, with
+        the endpoint stripping every money field for this role. So the grant
+        is READ and nothing more."""
+        assert has_permission(Role.HR_MANAGER, Resource.DASHBOARD, Action.READ)
+        for action in (Action.CREATE, Action.UPDATE, Action.DELETE):
+            assert not has_permission(Role.HR_MANAGER, Resource.DASHBOARD, action)
 
     def test_sees_all_rows_not_just_own(self):
         assert scope_for(Role.HR_MANAGER, Resource.EMPLOYEE) is Scope.ALL
