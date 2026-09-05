@@ -324,7 +324,7 @@ export interface LeaveAllocation {
   employee_id: number;
   employee_name: string;
   time_off_type_id: number;
-  time_off_type_name: string;
+  type_name: string;
   days: DecimalString;
   validity_from: DateString;
   validity_to: DateString;
@@ -337,7 +337,7 @@ export interface TimeOffRequest {
   employee_id: number;
   employee_name: string;
   time_off_type_id: number;
-  time_off_type_name: string;
+  type_name: string;
   is_paid: boolean;
   date_from: DateString;
   date_to: DateString;
@@ -361,7 +361,7 @@ export interface TimeOffRequest {
 export interface LeaveBalance {
   employee_id: number;
   time_off_type_id: number;
-  time_off_type_name: string;
+  type_name: string;
   unit: LeaveUnit;
   is_paid: boolean;
   allocated: DecimalString;
@@ -690,7 +690,7 @@ export interface TimeOffOverview {
   low_balances: {
     employee_id: number;
     employee_name: string;
-    time_off_type_name: string;
+    type_name: string;
     remaining: DecimalString;
   }[];
 }

@@ -64,7 +64,7 @@ export function RequestDrawer({
     <Drawer
       open={request !== undefined}
       onClose={onClose}
-      title={request ? `${request.employee_name} · ${request.time_off_type_name}` : ""}
+      title={request ? `${request.employee_name} · ${request.type_name}` : ""}
       wide
       footer={
         request && (
@@ -118,7 +118,7 @@ export function RequestDrawer({
                       </Link>
                     }
                   />
-                  <Pair k="Type" v={request.time_off_type_name} />
+                  <Pair k="Type" v={request.type_name} />
                   <Pair k="From" v={formatDate(request.date_from)} />
                   <Pair k="To" v={formatDate(request.date_to)} />
                   <Pair k="Counts as" v={daysLabel(request.duration_days)} />

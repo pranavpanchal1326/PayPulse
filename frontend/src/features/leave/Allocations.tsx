@@ -90,7 +90,7 @@ export function Allocations() {
           </Link>
         ),
       },
-      { id: "type", header: "Type", accessorFn: (a) => a.time_off_type_name },
+      { id: "type", header: "Type", accessorFn: (a) => a.type_name },
       {
         id: "days",
         header: "Days",

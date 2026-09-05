@@ -55,6 +55,8 @@ class EmployeeOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    # Derived on the model from the id; see Employee.employee_number.
+    employee_number: str = ""
     first_name: str
     last_name: str
     full_name: str

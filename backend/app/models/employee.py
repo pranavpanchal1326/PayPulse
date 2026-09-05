@@ -132,5 +132,16 @@ class Employee(Base, TimestampMixin):
     def has_bank_details(self) -> bool:
         return bool(self.bank_account and self.bank_ifsc)
 
+    @property
+    def employee_number(self) -> str:
+        """The staff number shown on the roster, the payslip and the pickers.
+
+        Derived from the primary key rather than stored: it has to be stable
+        and unique, which the id already is, and a second column would only
+        add a way for the two to disagree. Formatted, because "EMP0007" is
+        recognisable as an employee number on a payslip and "7" is not.
+        """
+        return f"EMP{self.id:04d}"
+
     def __repr__(self) -> str:  # pragma: no cover - debug helper
         return f"<Employee {self.id} {self.full_name}>"

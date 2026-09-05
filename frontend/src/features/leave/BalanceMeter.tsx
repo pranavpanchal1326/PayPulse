@@ -60,10 +60,10 @@ export function BalanceMeter({
   const segments = segmentsOf(balance);
 
   return (
-    <section className={cx("pp-bal", compact && "pp-bal--compact")} aria-label={balance.time_off_type_name}>
+    <section className={cx("pp-bal", compact && "pp-bal--compact")} aria-label={balance.type_name}>
       <header className="pp-bal__head">
         <span className="t-ui pp-bal__name">
-          {balance.time_off_type_name}
+          {balance.type_name}
           {!balance.is_paid && <span className="pp-bal__unpaid t-micro">UNPAID</span>}
         </span>
         <span className={cx("pp-bal__figure", low && "pp-bal__figure--low")}>
@@ -71,7 +71,7 @@ export function BalanceMeter({
           <RollingCount
             value={remaining}
             scale={compact ? "m" : "l"}
-            label={`${balance.time_off_type_name} remaining`}
+            label={`${balance.type_name} remaining`}
           />
           <span className="t-micro"> {unit.toUpperCase()} LEFT</span>
         </span>
@@ -79,7 +79,7 @@ export function BalanceMeter({
 
       {segments.length > 0 ? (
         <Meter
-          label={`${balance.time_off_type_name} balance`}
+          label={`${balance.type_name} balance`}
           segments={segments}
         />
       ) : (

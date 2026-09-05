@@ -6,6 +6,7 @@ from app.api.v1 import (
     auth,
     contracts,
     dashboard,
+    demo,
     employees,
     organization,
     payruns,
@@ -25,3 +26,4 @@ api_router.include_router(timeoff.router)
 api_router.include_router(salary.router)
 api_router.include_router(payruns.router)
 api_router.include_router(dashboard.router)
+api_router.include_router(demo.router)

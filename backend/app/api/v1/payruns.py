@@ -181,6 +181,7 @@ def _payslip_out(db: Session, payslip: Payslip) -> PayslipOut:
         payrun_name=payslip.payrun.name if payslip.payrun else None,
         employee_id=payslip.employee_id,
         employee_name=payslip.employee.full_name if payslip.employee else None,
+        employee_number=payslip.employee.employee_number if payslip.employee else "",
         contract_id=payslip.contract_id,
         structure_name=(
             payslip.payrun.salary_structure.name

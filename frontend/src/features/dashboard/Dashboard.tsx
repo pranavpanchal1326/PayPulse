@@ -247,11 +247,11 @@ export function Dashboard() {
                   <p className="t-micro">RUNNING LOW</p>
                   <ul>
                     {data.time_off_overview.low_balances.slice(0, 5).map((row) => (
-                      <li key={`${row.employee_id}-${row.time_off_type_name}`} className="t-ui-sm">
+                      <li key={`${row.employee_id}-${row.type_name}`} className="t-ui-sm">
                         <Link to={`/leave/balances?employee_id=${row.employee_id}`} className="focusable">
                           {row.employee_name}
                         </Link>{" "}
-                        · {row.time_off_type_name} · {decimalLabel(row.remaining)} left
+                        · {row.type_name} · {decimalLabel(row.remaining)} left
                       </li>
                     ))}
                   </ul>

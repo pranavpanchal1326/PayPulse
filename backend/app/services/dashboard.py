@@ -259,7 +259,7 @@ def build(
         {
             "employee_id": employee_id,
             "employee_name": f"{first} {last}",
-            "time_off_type_name": type_name,
+            "type_name": type_name,
             "remaining": str(left),
         }
         for employee_id, first, last, type_name, left in db.execute(

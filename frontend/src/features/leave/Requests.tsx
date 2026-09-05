@@ -143,10 +143,10 @@ export function Requests() {
       {
         id: "type",
         header: "Type",
-        accessorFn: (r) => r.time_off_type_name,
+        accessorFn: (r) => r.type_name,
         cell: ({ row }) => (
           <span className="pp-lv__type">
-            {row.original.time_off_type_name}
+            {row.original.type_name}
             {!row.original.is_paid && <Badge tone="orange">UNPAID</Badge>}
           </span>
         ),
@@ -430,7 +430,7 @@ export function Requests() {
           requests.reload();
           balances.reload();
           toast(
-            `Request filed — ${daysLabel(created.duration_days)} of ${created.time_off_type_name}.`,
+            `Request filed — ${daysLabel(created.duration_days)} of ${created.type_name}.`,
             "jade",
           );
         }}

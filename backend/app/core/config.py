@@ -57,6 +57,11 @@ class Settings(BaseSettings):
     # they reduce pay. See AbsencePolicy.
     PAYROLL_ABSENCE_POLICY: str = "TREAT_AS_UNPAID"
 
+    # The landing page renders for signed-out visitors, so the figures it
+    # shows come from one public, read-only, parameterless endpoint. True for
+    # a seeded demo; set false if this ever fronts real payroll.
+    PUBLIC_DEMO_STORY: bool = True
+
     # --- company (payslip header) ---
     COMPANY_NAME: str = "PayPulse Technologies Pvt. Ltd."
     CURRENCY: str = "INR"

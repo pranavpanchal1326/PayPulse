@@ -1,113 +1,105 @@
 /**
  * THE STORY'S DATA · blueprint P13
  *
- * *"Eight acts, built **from** the design system — which is why it comes
- * last."* The same discipline applies one level down, to the content: every
- * figure on this page is computed by `computePayslip` from the P3 fixtures,
- * through the identical path the product itself uses. Nothing here is written
- * out by hand.
+ * *"Every number has a reason"* is the landing page's whole claim, and it used
+ * to be false in the one place it mattered most: these figures were computed
+ * by a fixture payroll engine that shipped inside the browser bundle. The
+ * arithmetic was real, but it was a *second* implementation's arithmetic — so
+ * the page demonstrated a program nobody would ever run.
  *
- * That is not purity for its own sake. The landing page's entire claim is
- * *"every number has a reason"*, and a marketing page with a hand-typed hero
- * figure would be the one place in the product where that is false. If the
- * fixtures change, this page changes with them — and if the arithmetic ever
- * broke, the landing page would be the first screen to say so.
+ * Now one request to `/demo/story` returns the same month out of the same
+ * database the product uses, computed by the same engine. If payroll changes,
+ * the front door changes with it, and if payroll broke, this page would be the
+ * first screen to say so — which is what the claim was supposed to mean.
  *
- * **One protagonist, eight acts.** Divya Menon is the cast member with
- * approved *unpaid* leave inside the open period, which is what makes Act 03's
- * balance roll and Act 04's `LWP` carve the same event seen twice. Telling
- * eight acts about eight different people would have been easier to assemble
- * and would have demonstrated nothing.
+ * **Top-level await, deliberately.** Every act reads these as plain module
+ * constants, and they should: the data is immutable and loads once. Awaiting
+ * here keeps that shape — the module simply finishes initialising later. It is
+ * only ever imported from the landing page's lazy chunk, which already sits
+ * behind a `Suspense` boundary, so the wait is the boundary's problem and no
+ * act needs to know a network call happened.
  *
- * Everything below is computed **once, at module scope**. The module only
- * loads inside the landing page's lazy chunk, and the result is immutable — so
- * a `useMemo` in eight acts would be eight caches of one constant.
+ * The endpoint is public because this page renders signed out; see
+ * `backend/app/api/v1/demo.py` for why that is narrow rather than careless.
  */
-import type { Contract, PayslipDetail, PayslipLine } from "@/api/contract";
+import type {
+  Attendance,
+  Contract,
+  LeaveBalance,
+  PayrollWarning,
+  PayslipDetail,
+  PayslipLine,
+  PublicHoliday,
+  SalaryRule,
+  TimeOffRequest,
+} from "@/api/contract";
+import { api } from "@/api/client";
 import { money, type Money } from "@/api/money";
 import { buildLineModel, buildPayslipProvenance } from "@/components/signature";
 import type { LineModel, ProvenanceNode, StackBlock } from "@/components/signature";
-import { CURRENCY, OPEN_PERIOD } from "@/mocks/seed/anchor";
-import { monthEnd, monthLabel, monthStart, type ISODate } from "@/lib/date";
-import { attendances } from "@/mocks/seed/attendance";
-import { contractsCovering } from "@/mocks/seed/contracts";
-import { computePayslip, paiseToString } from "@/mocks/seed/engine";
-import { employeeById, holidays } from "@/mocks/seed/people";
-import { salaryRules } from "@/mocks/seed/payroll";
-import { OPEN_PAYRUN, warningsByPayrun } from "@/mocks/seed/payruns";
-import { balancesFor, timeOffRequests } from "@/mocks/seed/timeOff";
+import { monthLabel, monthOf, type ISODate } from "@/lib/date";
 
-/** The one person this page is about — `CAST`'s unpaid-leave case. */
-const PROTAGONIST = 17;
+interface StoryPayload {
+  payslip: PayslipDetail;
+  person: {
+    name: string;
+    title: string | null;
+    department: string | null;
+    number: string;
+  };
+  period: { start: ISODate; end: ISODate };
+  contracts: Contract[];
+  attendances: Attendance[];
+  holidays: PublicHoliday[];
+  salary_rules: SalaryRule[];
+  leave_requests: TimeOffRequest[];
+  balances: LeaveBalance[];
+  payrun: {
+    id: number;
+    name: string;
+    state: string;
+    payslip_count: number;
+    total_net: string;
+    warnings: PayrollWarning[];
+  };
+}
 
-const dec = (n: number) => n.toFixed(2);
+const data = await api.get<StoryPayload>("/demo/story");
 
 /* ── The period, and the person ──────────────────────────────────────── */
 
-const periodStart = monthStart(OPEN_PERIOD);
-const periodEnd = monthEnd(OPEN_PERIOD);
+const periodStart = data.period.start;
+const periodEnd = data.period.end;
+const openMonth = monthOf(periodStart);
 
-const employee = employeeById.get(PROTAGONIST)!;
-const contract: Contract = contractsCovering(PROTAGONIST, periodStart, periodEnd)[0];
+const lines: PayslipLine[] = data.payslip.lines;
+const myAttendance = data.attendances;
+const myContracts = data.contracts;
+const holidays = data.holidays;
 
-const computed = computePayslip(employee, contract, periodStart, periodEnd);
-
-const lines: PayslipLine[] = computed.lines.map((line, i) => ({
-  ...line,
-  id: i + 1,
-  payslip_id: 0,
-}));
+export const salaryRules = data.salary_rules;
 
 /**
  * A full `PayslipDetail`, not a subset — because Act 06 hands it straight to
  * the *product's* `PayslipCard`, and the landing page does not get its own
- * lighter-weight version of a payslip. If the card needs a field, the story
- * supplies the real one.
+ * lighter-weight version of a payslip. It is the real one now, so there is
+ * nothing left to assemble.
  */
-export const payslip: PayslipDetail = {
-  id: 0,
-  payrun_id: OPEN_PAYRUN.id,
-  employee_id: employee.id,
-  employee_name: employee.full_name,
-  employee_number: employee.employee_number,
-  department_name: employee.department_name,
-  contract_id: contract.id,
-  currency: CURRENCY,
-  period_start: periodStart,
-  period_end: periodEnd,
-  basic: paiseToString(computed.basic),
-  gross: paiseToString(computed.gross),
-  total_deductions: paiseToString(computed.totalDeductions),
-  net: paiseToString(computed.net),
-  worked_hours: dec(computed.counts.worked_hours),
-  overtime_hours: dec(computed.counts.overtime_hours),
-  period_days: computed.counts.period_days,
-  contract_days: computed.counts.contract_days,
-  payable_days: dec(computed.counts.payable_days),
-  unpaid_days: dec(computed.counts.unpaid_days),
-  absent_days: dec(computed.counts.absent_days),
-  paid_leave_days: dec(computed.counts.paid_leave_days),
-  unpaid_leave_days: dec(computed.counts.unpaid_leave_days),
-  state: "COMPUTED",
-  warning_codes: [],
-  lines,
-  contract,
-  warnings: [],
-};
+export const payslip: PayslipDetail = data.payslip;
 
 export const person = {
-  name: employee.full_name,
-  title: employee.job_title,
-  department: employee.department_name,
-  number: employee.employee_number,
+  name: data.person.name,
+  title: data.person.title ?? "",
+  department: data.person.department ?? "",
+  number: data.person.number,
 };
 
 export const period = {
   start: periodStart,
   end: periodEnd,
-  label: monthLabel(OPEN_PERIOD),
+  label: monthLabel(openMonth),
   /** The bead's home position — the middle of the period, so the line reads. */
-  middle: `${OPEN_PERIOD}-15` as ISODate,
+  middle: `${openMonth}-15` as ISODate,
 };
 
 /* ── The headline figures ────────────────────────────────────────────── */
@@ -122,13 +114,10 @@ export const figures = {
   periodDays: payslip.period_days,
   unpaidDays: Number(payslip.unpaid_days),
   ruleCount: lines.length,
-  contractCount: contractsCovering(PROTAGONIST, periodStart, periodEnd).length,
+  contractCount: myContracts.length,
 };
 
 /* ── THE LINE ────────────────────────────────────────────────────────── */
-
-const myAttendance = attendances.filter((a) => a.employee_id === PROTAGONIST);
-const myContracts = contractsCovering(PROTAGONIST, periodStart, periodEnd);
 
 /**
  * The hero's window is the **period**, not the seven-month span the product's
@@ -175,7 +164,9 @@ export const blocks: StackBlock[] = lines
       sequence: line.sequence,
       formula:
         rule?.amount_formula ??
-        (rule?.percentage ? `${rule.percentage}% of ${rule.percentage_base_code}` : null),
+        (rule?.percentage
+          ? `${rule.percentage}% of ${rule.percentage_base_code}`
+          : null),
       inputs: [
         { label: "quantity", value: line.quantity },
         { label: "rate", value: line.rate },
@@ -188,21 +179,11 @@ export const deductions = blocks.filter((b) => b.kind === "deduct");
 
 /* ── THE PROVENANCE ──────────────────────────────────────────────────── */
 
-const myLeave = timeOffRequests.filter(
-  (r) =>
-    r.employee_id === PROTAGONIST &&
-    r.state === "APPROVED" &&
-    r.date_to >= periodStart &&
-    r.date_from <= periodEnd,
-);
-
 export const provenance: ProvenanceNode = buildPayslipProvenance({
   payslip,
   rules: salaryRules,
-  leave: myLeave,
-  attendances: myAttendance.filter(
-    (a) => a.work_date >= periodStart && a.work_date <= periodEnd,
-  ),
+  leave: data.leave_requests,
+  attendances: myAttendance,
 });
 
 /* ── ACT 02 · one real day ───────────────────────────────────────────── */
@@ -214,17 +195,18 @@ export const provenance: ProvenanceNode = buildPayslipProvenance({
  * no overtime would leave the block it lands in at zero.
  */
 export const day = (() => {
-  const inPeriod = myAttendance.filter(
-    (a) => a.work_date >= periodStart && a.work_date <= periodEnd && a.check_out !== null,
-  );
+  const inPeriod = myAttendance.filter((a) => a.check_out !== null);
   const best =
     inPeriod.reduce<(typeof inPeriod)[number] | null>(
       (top, a) =>
-        top === null || Number(a.overtime_hours) > Number(top.overtime_hours) ? a : top,
+        top === null || Number(a.overtime_hours) > Number(top.overtime_hours)
+          ? a
+          : top,
       null,
     ) ?? inPeriod[0];
 
-  const clock = (stamp: string | null) => (stamp === null ? "--:--" : stamp.slice(11, 16));
+  const clock = (stamp: string | null) =>
+    stamp === null ? "--:--" : stamp.slice(11, 16);
   const hours = (value: string) => {
     const total = Math.round(Number(value) * 60);
     const hh = String(Math.floor(total / 60)).padStart(2, "0");
@@ -254,12 +236,13 @@ export const overtimeBlock = blocks.find((b) => b.code === "OT") ?? null;
  * is the order they happen in.
  */
 export const leave = (() => {
-  const balances = balancesFor(PROTAGONIST);
-  const paid = balances.find((b) => b.is_paid && Number(b.allocated) > 0) ?? balances[0];
+  const balances = data.balances;
+  const paid =
+    balances.find((b) => b.is_paid && Number(b.allocated) > 0) ?? balances[0];
   const lwp = blocks.find((b) => b.code === "LWP") ?? null;
 
   return {
-    typeName: paid?.time_off_type_name ?? "Annual leave",
+    typeName: paid?.type_name ?? "Annual leave",
     allocated: Number(paid?.allocated ?? 0),
     taken: Number(paid?.taken ?? 0),
     pending: Number(paid?.pending ?? 0),
@@ -275,25 +258,26 @@ export const leave = (() => {
 /* ── ACT 05 · the payrun, as the cockpit sees it ─────────────────────── */
 
 /**
- * Real counts from the open payrun, not the blueprint's illustrative `147`.
- * The dark act's claim is *"business logic demonstrated, not claimed"* — and
- * the one thing it cannot afford is an invented number in the header above the
- * demonstration.
+ * Real counts from the payrun this payslip belongs to, not the blueprint's
+ * illustrative `147`. The dark act's claim is *"business logic demonstrated,
+ * not claimed"* — and the one thing it cannot afford is an invented number in
+ * the header above the demonstration.
  */
 export const payrun = (() => {
-  const warnings = warningsByPayrun.get(OPEN_PAYRUN.id) ?? [];
-  const open = warnings.filter((w) => !w.is_resolved);
-  const blocking = open.filter((w) => w.severity === "ERROR" || w.blocks !== null);
+  const open = data.payrun.warnings.filter((w) => !w.is_resolved);
+  const blocking = open.filter(
+    (w) => w.severity === "ERROR" || w.blocks !== null,
+  );
   const first = blocking[0] ?? open[0] ?? null;
 
   return {
-    name: OPEN_PAYRUN.name,
-    label: monthLabel(OPEN_PERIOD),
-    payslips: OPEN_PAYRUN.payslip_count,
+    name: data.payrun.name,
+    label: monthLabel(openMonth),
+    payslips: data.payrun.payslip_count,
     warnings: open.length,
     blocked: blocking.length,
-    ready: Math.max(0, OPEN_PAYRUN.payslip_count - open.length),
-    totalNet: money(OPEN_PAYRUN.total_net),
+    ready: Math.max(0, data.payrun.payslip_count - open.length),
+    totalNet: money(data.payrun.total_net),
     /** The one the reader fixes, with their own hands, inside the page. */
     blocker: {
       title: first?.employee_name ?? "One payslip",
@@ -303,5 +287,4 @@ export const payrun = (() => {
   };
 })();
 
-export { salaryRules };
 export type { Money };

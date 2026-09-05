@@ -222,6 +222,7 @@ class PayslipOut(BaseModel):
     payrun_name: str | None = None
     employee_id: int
     employee_name: str | None = None
+    employee_number: str = ""
     contract_id: int | None = None
     structure_name: str | None = None
     period_start: date
