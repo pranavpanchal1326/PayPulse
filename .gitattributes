@@ -1,0 +1,14 @@
+# This repo is edited on Windows but runs inside Linux containers.
+# Without this, docker-entrypoint.sh is checked out with CRLF and the
+# container dies on "bad interpreter: /usr/bin/env bash^M".
+* text=auto eol=lf
+
+*.sh   text eol=lf
+*.py   text eol=lf
+*.yml  text eol=lf
+*.toml text eol=lf
+Dockerfile text eol=lf
+
+*.pdf  binary
+*.png  binary
+*.jpg  binary

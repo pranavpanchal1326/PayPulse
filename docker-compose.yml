@@ -1,0 +1,70 @@
+name: peoplepay360
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-peoplepay}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-peoplepay}
+      POSTGRES_DB: ${POSTGRES_DB:-peoplepay360}
+    ports:
+      - "${POSTGRES_PORT_HOST:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # The api container waits on this, so migrations never race the DB.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-peoplepay} -d ${POSTGRES_DB:-peoplepay360}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  mail:
+    # Mailpit rather than MailHog: same 1025/8025 ports and the same "catch
+    # every outgoing mail in a browsable inbox" role, but still maintained
+    # and it has arm64 images. The PRD's http://localhost:8025 is unchanged.
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"   # web inbox - bulk payslip send is demoed here
+      - "1025:1025"   # SMTP
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
+  api:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-peoplepay}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-peoplepay}
+      POSTGRES_DB: ${POSTGRES_DB:-peoplepay360}
+      SECRET_KEY: ${SECRET_KEY:-dev-only-insecure-key-change-me-before-deploying-anywhere}
+      DEBUG: ${DEBUG:-true}
+      SMTP_HOST: mail
+      SMTP_PORT: 1025
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+    ports:
+      - "8000:8000"
+    volumes:
+      # Bind mount for --reload. The anonymous volume keeps the image's
+      # installed egg-info from being shadowed by the host directory.
+      - ./backend:/app
+      - /app/peoplepay360_backend.egg-info
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # frontend:  Pranav adds this in F0.
+  #   build: ./frontend
+  #   ports: ["5173:5173"]
+  #   volumes: ["./frontend:/app", "/app/node_modules"]
+
+volumes:
+  pgdata:
