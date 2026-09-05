@@ -332,6 +332,9 @@ export interface LeaveAllocation {
   notes: string | null;
 }
 
+/** Half days cover one date; the API refuses a half day over a range. */
+export type HalfDay = "FIRST_HALF" | "SECOND_HALF";
+
 export interface TimeOffRequest {
   id: number;
   employee_id: number;
@@ -346,6 +349,8 @@ export interface TimeOffRequest {
    * week is 2 days, not 4. Hour-unit types convert on approval.
    */
   duration_days: DecimalString;
+  /** Which half of the day, when it is half a day. Null is a whole day. */
+  half_day: HalfDay | null;
   state: RequestState;
   reason: string | null;
   approver_id: number | null;
@@ -386,6 +391,8 @@ export interface TimeOffRequestCreate {
   time_off_type_id: number;
   date_from: DateString;
   date_to: DateString;
+  /** Only valid when date_from === date_to, and never on an hour-unit type. */
+  half_day?: HalfDay | null;
   reason?: string | null;
 }
 

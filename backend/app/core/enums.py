@@ -93,6 +93,21 @@ class AbsencePolicy(StrEnum):
     IGNORE = "IGNORE"
 
 
+class HalfDay(StrEnum):
+    """Which half of a single day a time-off request covers.
+
+    Null on the request means a whole day, which is why this is not a boolean:
+    "is_half_day = true" cannot say *which* half, and payroll does not care but
+    the approver and the team calendar do - a morning off and an afternoon off
+    are different arrangements on the same date.
+
+    Only meaningful when date_from == date_to; the model rejects it otherwise.
+    """
+
+    FIRST_HALF = "FIRST_HALF"
+    SECOND_HALF = "SECOND_HALF"
+
+
 class LeaveUnit(StrEnum):
     DAYS = "DAYS"
     HOURS = "HOURS"

@@ -40,13 +40,17 @@ class PayBasis:
     period_start: date
     period_end: date
 
+    # period_days and contract_days are whole days - a period and an
+    # employment window start and end on date boundaries. Everything derived
+    # from leave is Decimal, because half a day of unpaid leave is half a
+    # day's pay.
     period_days: int
     contract_days: int
-    payable_days: int
-    unpaid_days: int
+    payable_days: Decimal
+    unpaid_days: Decimal
 
-    paid_leave_days: int
-    unpaid_leave_days: int
+    paid_leave_days: Decimal
+    unpaid_leave_days: Decimal
     absent_days: int
 
     worked_hours: Decimal
@@ -133,9 +137,9 @@ def build(
 
     contract_dates = set(day_basis.contract_dates)
     # Leave outside the contract window must not reduce pay for a period the
-    # employee was not employed in - which is why leave_engine returns dates.
-    paid_leave = leave.paid_dates & contract_dates
-    unpaid_leave = leave.unpaid_dates & contract_dates
+    # employee was not employed in - which is why leave_engine returns dates
+    # alongside the fractions.
+    paid_leave_days, unpaid_leave_days = leave.within(contract_dates)
 
     absent = attendance_service.absent_dates(
         day_basis.contract_dates,
@@ -144,17 +148,17 @@ def build(
         settings.PAYROLL_ABSENCE_POLICY,
     )
 
-    unpaid_days = len(unpaid_leave) + len(absent)
+    unpaid_days = unpaid_leave_days + Decimal(len(absent))
 
     return PayBasis(
         period_start=period_start,
         period_end=period_end,
         period_days=day_basis.period_days,
         contract_days=day_basis.contract_days,
-        payable_days=day_basis.contract_days - unpaid_days,
+        payable_days=Decimal(day_basis.contract_days) - unpaid_days,
         unpaid_days=unpaid_days,
-        paid_leave_days=len(paid_leave),
-        unpaid_leave_days=len(unpaid_leave),
+        paid_leave_days=paid_leave_days,
+        unpaid_leave_days=unpaid_leave_days,
         absent_days=len(absent),
         worked_hours=attendance.worked_hours,
         overtime_hours=attendance.overtime_hours,

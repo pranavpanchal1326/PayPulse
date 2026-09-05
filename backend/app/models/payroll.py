@@ -150,10 +150,20 @@ class Payslip(Base, TimestampMixin):
     # "Worked Days") without recomputing against data that may have moved.
     period_days: Mapped[int] = mapped_column(Integer, default=0)
     contract_days: Mapped[int] = mapped_column(Integer, default=0)
-    payable_days: Mapped[int] = mapped_column(Integer, default=0)
-    unpaid_days: Mapped[int] = mapped_column(Integer, default=0)
-    paid_leave_days: Mapped[int] = mapped_column(Integer, default=0)
-    unpaid_leave_days: Mapped[int] = mapped_column(Integer, default=0)
+    # Decimal, not Integer: a half day of leave is half a day of pay, and the
+    # API contract has always described these as decimal strings.
+    payable_days: Mapped[Decimal] = mapped_column(
+        Numeric(6, 2), default=Decimal("0.00")
+    )
+    unpaid_days: Mapped[Decimal] = mapped_column(
+        Numeric(6, 2), default=Decimal("0.00")
+    )
+    paid_leave_days: Mapped[Decimal] = mapped_column(
+        Numeric(6, 2), default=Decimal("0.00")
+    )
+    unpaid_leave_days: Mapped[Decimal] = mapped_column(
+        Numeric(6, 2), default=Decimal("0.00")
+    )
     absent_days: Mapped[int] = mapped_column(Integer, default=0)
     worked_hours: Mapped[Decimal] = mapped_column(
         Numeric(7, 2), default=Decimal("0.00")

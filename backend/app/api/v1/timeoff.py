@@ -301,6 +301,7 @@ def _request_out(row: TimeOffRequest) -> TimeOffRequestOut:
         date_to=row.date_to,
         duration_days=row.duration_days,
         duration_hours=row.duration_hours,
+        half_day=row.half_day,
         calendar_days=(row.date_to - row.date_from).days + 1,
         state=row.state,
         reason=row.reason,
@@ -374,7 +375,13 @@ def create_request(
         )
 
     days, hours = leave_engine.compute_duration(
-        db, employee, type_, payload.date_from, payload.date_to, payload.duration_hours
+        db,
+        employee,
+        type_,
+        payload.date_from,
+        payload.date_to,
+        payload.duration_hours,
+        payload.half_day,
     )
 
     row = TimeOffRequest(
@@ -384,6 +391,7 @@ def create_request(
         date_to=payload.date_to,
         duration_days=days,
         duration_hours=hours,
+        half_day=payload.half_day,
         reason=payload.reason,
         state=RequestState.TO_APPROVE if payload.submit else RequestState.DRAFT,
     )

@@ -94,37 +94,62 @@ class TestStateGroups:
         }
 
 
+WHOLE = Decimal("1.00")
+HALF = Decimal("0.50")
+
+
 class TestLeaveDays:
     """The split the pay basis consumes (PRD section 4.2)."""
 
-    paid = frozenset({date(2026, 3, 2), date(2026, 3, 3)})
-    unpaid = frozenset({date(2026, 3, 4)})
+    paid = {date(2026, 3, 2): WHOLE, date(2026, 3, 3): WHOLE}
+    unpaid = {date(2026, 3, 4): WHOLE}
 
     def test_counts(self):
-        days = LeaveDays(paid_dates=self.paid, unpaid_dates=self.unpaid)
-        assert days.paid_days == 2
-        assert days.unpaid_days == 1
+        days = LeaveDays(paid=self.paid, unpaid=self.unpaid)
+        assert days.paid_days == Decimal("2.00")
+        assert days.unpaid_days == Decimal("1.00")
 
     def test_all_dates_is_the_union(self):
-        days = LeaveDays(paid_dates=self.paid, unpaid_dates=self.unpaid)
+        days = LeaveDays(paid=self.paid, unpaid=self.unpaid)
         assert len(days.all_dates) == 3
 
     def test_empty(self):
-        days = LeaveDays(paid_dates=frozenset(), unpaid_dates=frozenset())
-        assert (days.paid_days, days.unpaid_days) == (0, 0)
+        days = LeaveDays(paid={}, unpaid={})
+        assert (days.paid_days, days.unpaid_days) == (Decimal("0.00"), Decimal("0.00"))
         assert days.all_dates == frozenset()
 
     def test_only_unpaid_leave_reaches_lwp(self):
         # Paid leave must not reduce pay; unpaid leave must.
-        days = LeaveDays(paid_dates=self.paid, unpaid_dates=frozenset())
-        assert days.unpaid_days == 0
+        days = LeaveDays(paid=self.paid, unpaid={})
+        assert days.unpaid_days == Decimal("0.00")
 
     def test_dates_not_counts_so_the_caller_can_intersect(self):
-        # Returning dates lets payroll drop leave that falls outside the
+        # Keeping dates lets payroll drop leave that falls outside the
         # contract window; counts alone could not.
-        days = LeaveDays(paid_dates=self.paid, unpaid_dates=self.unpaid)
+        days = LeaveDays(paid=self.paid, unpaid=self.unpaid)
         contract_window = {date(2026, 3, 3), date(2026, 3, 4)}
         assert len(days.all_dates & contract_window) == 2
+
+    def test_a_half_day_counts_as_half(self):
+        days = LeaveDays(paid={}, unpaid={date(2026, 3, 4): HALF})
+        assert days.unpaid_days == Decimal("0.50")
+
+    def test_a_half_day_still_occupies_its_date(self):
+        # Absence derivation subtracts dates, not fractions: somebody who took
+        # the morning off and worked the afternoon was not absent.
+        days = LeaveDays(paid={}, unpaid={date(2026, 3, 4): HALF})
+        assert days.all_dates == frozenset({date(2026, 3, 4)})
+
+    def test_within_restricts_to_the_contract_window(self):
+        days = LeaveDays(
+            paid={date(2026, 3, 2): WHOLE, date(2026, 3, 3): HALF},
+            unpaid={date(2026, 3, 4): HALF},
+        )
+        # 3 Mar and 4 Mar only - 2 Mar falls outside the window and must not
+        # reduce pay for a period the employee was not employed in.
+        paid, unpaid = days.within({date(2026, 3, 3), date(2026, 3, 4)})
+        assert paid == Decimal("0.50")
+        assert unpaid == Decimal("0.50")
 
 
 class TestAbsenceIntegration:
@@ -140,8 +165,8 @@ class TestAbsenceIntegration:
             date(2026, 3, 5),
         ]
         leave = LeaveDays(
-            paid_dates=frozenset({date(2026, 3, 3)}),
-            unpaid_dates=frozenset({date(2026, 3, 4)}),
+            paid={date(2026, 3, 3): WHOLE},
+            unpaid={date(2026, 3, 4): WHOLE},
         )
         absent = absent_dates(contract, frozenset({date(2026, 3, 2)}), leave.all_dates)
         assert absent == frozenset({date(2026, 3, 5)})
@@ -152,7 +177,7 @@ class TestAbsenceIntegration:
 
         day = date(2026, 3, 3)
         leave = LeaveDays(
-            paid_dates=frozenset({day}) if kind == "paid" else frozenset(),
-            unpaid_dates=frozenset({day}) if kind == "unpaid" else frozenset(),
+            paid={day: WHOLE} if kind == "paid" else {},
+            unpaid={day: WHOLE} if kind == "unpaid" else {},
         )
         assert absent_dates([day], frozenset(), leave.all_dates) == frozenset()

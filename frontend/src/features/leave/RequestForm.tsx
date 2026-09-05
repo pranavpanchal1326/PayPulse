@@ -14,7 +14,7 @@
  * back from the server.
  */
 import { useEffect, useState } from "react";
-import type { Employee, TimeOffRequest, TimeOffType } from "@/api/contract";
+import type { Employee, HalfDay, TimeOffRequest, TimeOffType } from "@/api/contract";
 import { ApiError } from "@/api/errors";
 import { useQuery, useSubmission } from "@/api/useQuery";
 import { useAuth } from "@/auth/AuthContext";
@@ -45,6 +45,7 @@ export function RequestForm({
   const [from, setFrom] = useState(today());
   const [to, setTo] = useState(today());
   const [hours, setHours] = useState("8");
+  const [halfDay, setHalfDay] = useState("");
   const [reason, setReason] = useState("");
   const [refusal, setRefusal] = useState<string>();
 
@@ -74,6 +75,17 @@ export function RequestForm({
         ) + 1
       : 0;
 
+  /**
+   * A half day is half of *one* day, and an hour-unit type already expresses
+   * fractions in its own unit. Offering the control outside those cases would
+   * be offering a choice the API refuses.
+   */
+  const canBeHalfDay = from === to && type?.unit !== "HOURS";
+
+  useEffect(() => {
+    if (!canBeHalfDay && halfDay !== "") setHalfDay("");
+  }, [canBeHalfDay, halfDay]);
+
   async function save() {
     setRefusal(undefined);
     let created: TimeOffRequest | undefined;
@@ -86,6 +98,9 @@ export function RequestForm({
           date_to: to,
           reason: reason.trim() === "" ? null : reason.trim(),
           ...(type?.unit === "HOURS" ? { hours: Number(hours) } : {}),
+          ...(canBeHalfDay && halfDay !== ""
+            ? { half_day: halfDay as HalfDay }
+            : {}),
         });
       } catch (cause) {
         // Overlaps and all-weekend ranges are 422 business rules with their
@@ -188,6 +203,20 @@ export function RequestForm({
               onChange={(e) => setTo(e.target.value)}
             />
           </div>
+
+          {canBeHalfDay && (
+            <Select
+              label="Duration"
+              help="Half a day is recorded as 0.50 days and deducts half a day's pay if the type is unpaid."
+              value={halfDay}
+              onChange={(e) => setHalfDay(e.target.value)}
+              options={[
+                { value: "", label: "Full day" },
+                { value: "FIRST_HALF", label: "First half (morning)" },
+                { value: "SECOND_HALF", label: "Second half (afternoon)" },
+              ]}
+            />
+          )}
 
           {type?.unit === "HOURS" && (
             <Field

@@ -36,7 +36,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.enums import LeaveUnit, RequestState
+from app.core.enums import HalfDay, LeaveUnit, RequestState
 from app.db.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
@@ -131,6 +131,12 @@ class TimeOffRequest(Base, TimestampMixin):
     __table_args__ = (
         CheckConstraint("date_to >= date_from", name="ck_request_date_order"),
         CheckConstraint("duration_days >= 0", name="ck_request_duration_positive"),
+        # A half day is half of *one* day. Spanning a range and calling it a
+        # half is not a shorter leave, it is an ambiguous one.
+        CheckConstraint(
+            "half_day IS NULL OR date_from = date_to",
+            name="ck_request_half_day_is_single_day",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -150,6 +156,11 @@ class TimeOffRequest(Base, TimestampMixin):
         Numeric(5, 2), nullable=False, default=Decimal("0.00")
     )
     # Only meaningful when the type's unit is HOURS.
+    # Null means a whole day. See HalfDay for why this is not a boolean.
+    half_day: Mapped[HalfDay | None] = mapped_column(
+        SAEnum(HalfDay, name="half_day_enum", native_enum=False, length=16),
+        nullable=True,
+    )
     duration_hours: Mapped[Decimal | None] = mapped_column(
         Numeric(6, 2), nullable=True
     )

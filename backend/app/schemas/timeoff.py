@@ -5,7 +5,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.core.enums import LeaveUnit, RequestState
+from app.core.enums import HalfDay, LeaveUnit, RequestState
 
 # --- types -------------------------------------------------------------
 
@@ -89,6 +89,8 @@ class TimeOffRequestCreate(BaseModel):
     duration_hours: Decimal | None = Field(
         default=None, gt=0, max_digits=6, decimal_places=2
     )
+    # Which half of the day, when it is half a day. Null is a whole day.
+    half_day: HalfDay | None = None
     reason: str | None = None
     # Skip DRAFT and go straight to the approver.
     submit: bool = True
@@ -120,6 +122,7 @@ class TimeOffRequestOut(BaseModel):
     # Schedule- and holiday-aware working days, frozen at write time.
     duration_days: Decimal
     duration_hours: Decimal | None = None
+    half_day: HalfDay | None = None
     calendar_days: int = 0
     state: RequestState
     reason: str | None = None

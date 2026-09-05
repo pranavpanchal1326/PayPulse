@@ -28,7 +28,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.enums import LeaveUnit, RequestState
+from app.core.enums import HalfDay, LeaveUnit, RequestState
 from app.core.errors import BusinessRuleError, ConflictError
 from app.models.timeoff import LeaveAllocation, TimeOffRequest, TimeOffType
 from app.services import calendar, contract_resolver, schedule_calc
@@ -89,6 +89,7 @@ def compute_duration(
     date_from: date,
     date_to: date,
     hours: Decimal | None = None,
+    half_day: HalfDay | None = None,
 ) -> tuple[Decimal, Decimal | None]:
     """Return (duration_days, duration_hours) for a request.
 
@@ -102,6 +103,37 @@ def compute_duration(
         )
 
     working = leave_working_dates(db, employee, date_from, date_to)
+
+    if half_day is not None:
+        if date_from != date_to:
+            raise BusinessRuleError(
+                "A half day covers one date, so date_from and date_to must "
+                "match.",
+                code="half_day_spans_range",
+                field_errors=[
+                    {"field": "half_day", "message": "Only valid on a single day"}
+                ],
+            )
+        if not working:
+            raise BusinessRuleError(
+                f"{date_from} is not a working day for this employee, so "
+                "there is no half of it to take.",
+                code="no_working_days",
+            )
+        # Half a working day, whichever half. Hour-unit types are excluded
+        # because they already express fractions, in their own unit.
+        if time_off_type.unit is LeaveUnit.HOURS:
+            raise BusinessRuleError(
+                f"{time_off_type.name} is measured in hours - ask for half a "
+                "day's worth of hours instead.",
+                code="half_day_on_hour_type",
+            )
+        per_day = daily_hours_for(db, employee, date_from)
+        return Decimal("0.50"), (
+            (per_day / 2).quantize(_CENTS, rounding=ROUND_HALF_UP)
+            if per_day > 0
+            else None
+        )
 
     if time_off_type.unit is LeaveUnit.HOURS:
         if hours is None or hours <= 0:
@@ -314,22 +346,50 @@ def assert_within_balance(
 @dataclass(frozen=True)
 class LeaveDays:
     """Approved leave inside a period, split the way the pay basis needs it
-    (PRD section 4.2)."""
+    (PRD section 4.2).
 
-    paid_dates: frozenset[date]
-    unpaid_dates: frozenset[date]
+    Date -> fraction of that day, not a set of dates, because a half day is
+    half a day's pay. The fraction is what payroll deducts; the dates are what
+    absence derivation subtracts, and for that a half day still counts as the
+    date being accounted for - somebody who took the morning off and worked
+    the afternoon was not absent.
+    """
+
+    paid: dict[date, Decimal]
+    unpaid: dict[date, Decimal]
+
+    @property
+    def paid_dates(self) -> frozenset[date]:
+        return frozenset(self.paid)
+
+    @property
+    def unpaid_dates(self) -> frozenset[date]:
+        return frozenset(self.unpaid)
 
     @property
     def all_dates(self) -> frozenset[date]:
         return self.paid_dates | self.unpaid_dates
 
     @property
-    def paid_days(self) -> int:
-        return len(self.paid_dates)
+    def paid_days(self) -> Decimal:
+        return sum(self.paid.values(), Decimal("0.00"))
 
     @property
-    def unpaid_days(self) -> int:
-        return len(self.unpaid_dates)
+    def unpaid_days(self) -> Decimal:
+        return sum(self.unpaid.values(), Decimal("0.00"))
+
+    def within(self, dates) -> tuple[Decimal, Decimal]:
+        """(paid, unpaid) day counts restricted to `dates`.
+
+        Leave outside the contract window must not reduce pay for a period the
+        employee was not employed in, which is why the caller passes the
+        contract's dates rather than this trusting its own keys.
+        """
+        allowed = set(dates)
+        return (
+            sum((v for d, v in self.paid.items() if d in allowed), Decimal("0.00")),
+            sum((v for d, v in self.unpaid.items() if d in allowed), Decimal("0.00")),
+        )
 
 
 def approved_leave_days(
@@ -365,8 +425,8 @@ def approved_leave_days(
             )
         )
 
-    paid: set[date] = set()
-    unpaid: set[date] = set()
+    paid: dict[date, Decimal] = {}
+    unpaid: dict[date, Decimal] = {}
     for request in requests:
         span_start = max(request.date_from, period_start)
         span_end = min(request.date_to, period_end)
@@ -374,9 +434,17 @@ def approved_leave_days(
             db, employee, span_start, span_end,
             contract=contract, holidays=holidays,
         )
-        (paid if request.time_off_type.is_paid else unpaid).update(days)
+        # A half day is only ever one date, so the fraction applies to all of
+        # the (single) day this request contributes.
+        share = Decimal("0.50") if request.half_day is not None else Decimal("1.00")
+        bucket = paid if request.time_off_type.is_paid else unpaid
+        for day in days:
+            # Two requests touching one date would be an overlap, which
+            # assert_no_overlap rejects - so the larger claim wins rather than
+            # the sum, which could otherwise exceed a whole day.
+            bucket[day] = max(bucket.get(day, Decimal("0.00")), share)
 
-    return LeaveDays(paid_dates=frozenset(paid), unpaid_dates=frozenset(unpaid))
+    return LeaveDays(paid=paid, unpaid=unpaid)
 
 
 def approved_requests_many(
