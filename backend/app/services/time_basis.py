@@ -76,6 +76,7 @@ class PayBasis:
 
     @property
     def is_prorated(self) -> bool:
+        """Whether the contract covered only part of the pay period."""
         return self.contract_days < self.period_days
 
     def as_context(self) -> dict:

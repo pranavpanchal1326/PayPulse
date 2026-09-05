@@ -47,6 +47,11 @@ if TYPE_CHECKING:
 
 
 class Payrun(Base, TimestampMixin):
+    """One payroll batch for one period.
+
+    Moves DRAFT -> COMPUTED -> VALIDATED -> PAID, and warnings gate each
+    step. Holds the payslips it generated.
+    """
     __tablename__ = "payrun"
     __table_args__ = (
         CheckConstraint(
@@ -101,6 +106,11 @@ class Payrun(Base, TimestampMixin):
 
 
 class Payslip(Base, TimestampMixin):
+    """One employee's pay for one payrun, with its computed lines.
+
+    Amounts are frozen at compute time: payroll never recalculates a slip
+    behind the employee's back.
+    """
     __tablename__ = "payslip"
     __table_args__ = (
         # One index, not two. A (payrun_id, employee_id) unique constraint used

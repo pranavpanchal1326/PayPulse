@@ -69,6 +69,7 @@ class FormulaError(ValueError):
 
 
 def _depth(node: ast.AST, current: int = 0) -> int:
+    """How deeply the expression nests, used to cap formula complexity."""
     children = list(ast.iter_child_nodes(node))
     if not children:
         return current
@@ -167,6 +168,7 @@ class _DecimalizeNumbers(ast.NodeTransformer):
     """
 
     def visit_Constant(self, node: ast.Constant) -> ast.AST:
+        """Rewrite numeric literals to Decimal; leave everything else."""
         if isinstance(node.value, bool) or not isinstance(
             node.value, (int, float)
         ):
@@ -182,6 +184,7 @@ class _DecimalizeNumbers(ast.NodeTransformer):
 
 
 def _to_decimal(value) -> Decimal:
+    """Coerce a formula result to Decimal, so money never touches float."""
     if isinstance(value, Decimal):
         return value
     if isinstance(value, bool):

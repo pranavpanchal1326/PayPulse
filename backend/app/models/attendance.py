@@ -44,6 +44,11 @@ if TYPE_CHECKING:
 
 
 class Attendance(Base, TimestampMixin):
+    """One employee's record of one calendar day.
+
+    Absence has no row - see the module note. Worked and overtime hours are
+    computed server-side, never accepted from a client.
+    """
     __tablename__ = "attendance"
     __table_args__ = (
         # One row per employee per day. Stops a double check-in from

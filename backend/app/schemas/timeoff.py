@@ -1,3 +1,4 @@
+"""Leave types, allocations, requests and balances (spec A4, B4)."""
 from __future__ import annotations
 
 from datetime import date
@@ -11,6 +12,8 @@ from app.core.enums import HalfDay, LeaveUnit, RequestState
 
 
 class TimeOffTypeCreate(BaseModel):
+    """A new leave type: its unit, whether it is paid, whether it needs an
+    allocation."""
     name: str = Field(min_length=1, max_length=120)
     code: str = Field(min_length=1, max_length=20, pattern=r"^[A-Z][A-Z0-9_]{0,19}$")
     unit: LeaveUnit = LeaveUnit.DAYS
@@ -22,6 +25,7 @@ class TimeOffTypeCreate(BaseModel):
 
 
 class TimeOffTypeUpdate(BaseModel):
+    """Changes to a leave type. Omitted fields are left alone."""
     name: str | None = Field(default=None, min_length=1, max_length=120)
     unit: LeaveUnit | None = None
     is_paid: bool | None = None
@@ -31,6 +35,7 @@ class TimeOffTypeUpdate(BaseModel):
 
 
 class TimeOffTypeOut(BaseModel):
+    """A leave type as the pickers and balance meters read it."""
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -47,6 +52,11 @@ class TimeOffTypeOut(BaseModel):
 
 
 class LeaveAllocationCreate(BaseModel):
+    """Grant leave to one employee for a validity window.
+
+    `days` is always in days, even for an hours-unit type: the ledger is
+    kept in days because that is what payroll consumes.
+    """
     employee_id: int
     time_off_type_id: int
     days: Decimal = Field(gt=0, max_digits=6, decimal_places=2)
@@ -56,12 +66,14 @@ class LeaveAllocationCreate(BaseModel):
 
     @model_validator(mode="after")
     def _validity_order(self) -> LeaveAllocationCreate:
+        """Reject a validity window that ends before it starts."""
         if self.validity_to and self.validity_to < self.validity_from:
             raise ValueError("validity_to cannot be before validity_from")
         return self
 
 
 class LeaveAllocationOut(BaseModel):
+    """One grant of leave, and where it stands in approval."""
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -80,6 +92,12 @@ class LeaveAllocationOut(BaseModel):
 
 
 class TimeOffRequestCreate(BaseModel):
+    """A request for leave.
+
+    Supply `duration_hours` for an hours-unit type, or `half_day` to take
+    half of a single day. Otherwise the duration is worked out from the
+    dates, skipping weekends and public holidays.
+    """
     # Omitted by an employee filing for themselves.
     employee_id: int | None = None
     time_off_type_id: int
@@ -97,16 +115,19 @@ class TimeOffRequestCreate(BaseModel):
 
     @model_validator(mode="after")
     def _date_order(self) -> TimeOffRequestCreate:
+        """Reject a request whose end date precedes its start."""
         if self.date_to < self.date_from:
             raise ValueError("date_to cannot be before date_from")
         return self
 
 
 class DecisionRequest(BaseModel):
+    """An approver's note attached to an approve, refuse or cancel."""
     note: str | None = Field(default=None, max_length=500)
 
 
 class TimeOffRequestOut(BaseModel):
+    """A leave request, its computed duration and who decided it."""
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -153,6 +174,7 @@ class BalanceOut(BaseModel):
 
 
 class LeaveSummary(BaseModel):
+    """Approved leave in a period, split paid and unpaid for the pay basis."""
     """Approved leave in a period, split the way the pay basis needs it."""
 
     employee_id: int

@@ -41,6 +41,17 @@ def derive_status(
 
 
 def validate_ifsc(value: str | None) -> str | None:
+    """Normalise an IFSC code, or reject it.
+
+    Args:
+        value: Raw input. Blank is treated as absent.
+
+    Returns:
+        The code upper-cased and trimmed, or None if not supplied.
+
+    Raises:
+        BusinessRuleError: If the value is not a valid IFSC.
+    """
     if value is None or value == "":
         return None
     normalised = value.strip().upper()
@@ -101,6 +112,11 @@ def apply_scope(stmt: Select, ctx: AccessContext) -> Select:
 
 
 def get_or_404(db: Session, employee_id: int, ctx: AccessContext) -> Employee:
+    """Fetch one employee the caller is allowed to see.
+
+    Raises the same NotFoundError whether the row is missing or merely out
+    of scope, so a caller cannot probe for ids it may not read.
+    """
     stmt = apply_scope(select(Employee).where(Employee.id == employee_id), ctx)
     employee = db.scalar(stmt)
     if employee is None:
@@ -147,6 +163,7 @@ def summary_counts(db: Session, employee_id: int) -> dict[str, int]:
 
 
 def _contract_source():
+    """The Contract model and its employee FK, if that module exists yet."""
     try:
         from app.models.contract import Contract
     except ImportError:
@@ -155,6 +172,7 @@ def _contract_source():
 
 
 def _attendance_source():
+    """The Attendance model and its employee FK, if that module exists yet."""
     try:
         from app.models.attendance import Attendance
     except ImportError:
@@ -163,6 +181,7 @@ def _attendance_source():
 
 
 def _request_source():
+    """The TimeOffRequest model and its employee FK, if it exists yet."""
     try:
         from app.models.timeoff import TimeOffRequest
     except ImportError:
@@ -171,6 +190,7 @@ def _request_source():
 
 
 def _payslip_source():
+    """The Payslip model and its employee FK, if that module exists yet."""
     try:
         from app.models.payroll import Payslip
     except ImportError:
@@ -179,6 +199,7 @@ def _payslip_source():
 
 
 def _allocation_source():
+    """The LeaveAllocation model and its employee FK, if it exists yet."""
     try:
         from app.models.timeoff import LeaveAllocation
     except ImportError:

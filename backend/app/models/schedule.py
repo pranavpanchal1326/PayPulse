@@ -30,6 +30,10 @@ if TYPE_CHECKING:
 
 
 class WorkingSchedule(Base, TimestampMixin):
+    """A working pattern - which days, how many hours - shared by employees.
+
+    Its totals are derived from the lines, so never set them from a client.
+    """
     __tablename__ = "working_schedule"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

@@ -20,6 +20,7 @@ from app.db.base import Base, TimestampMixin
 
 
 class PublicHoliday(Base, TimestampMixin):
+    """One public holiday. Seeded, never edited through the API."""
     __tablename__ = "public_holiday"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

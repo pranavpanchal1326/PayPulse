@@ -16,6 +16,7 @@ from app.db.base import Base
 
 
 class RateLimit(Base):
+    """One fixed-window counter, keyed by whatever is being limited."""
     __tablename__ = "rate_limit"
 
     key: Mapped[str] = mapped_column(String(255), primary_key=True)

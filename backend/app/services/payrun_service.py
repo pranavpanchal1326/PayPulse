@@ -487,6 +487,12 @@ def reopen(db: Session, payrun: Payrun) -> Payrun:
 
 
 def cancel(db: Session, payrun: Payrun) -> Payrun:
+    """Cancel a payrun and every payslip in it.
+
+    Raises:
+        ConflictError: If the payrun is already PAID. Paid runs are kept as
+            historical records rather than unwound.
+    """
     if payrun.state is PayrunState.PAID:
         raise ConflictError(
             "A PAID payrun cannot be cancelled.", code="payrun_is_paid"

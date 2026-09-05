@@ -123,6 +123,7 @@ def _money(value: Decimal) -> str:
 
 
 def render_html(payslip: Payslip) -> str:
+    """Render one payslip to HTML - the same markup the PDF is made from."""
     employee = payslip.employee
     earnings = [
         line

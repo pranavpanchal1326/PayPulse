@@ -33,6 +33,7 @@ MAX_WORKED_HOURS = Decimal("16.00")
 
 
 def app_timezone() -> ZoneInfo:
+    """The timezone attendance days are reckoned in."""
     return ZoneInfo(settings.APP_TIMEZONE)
 
 
@@ -170,6 +171,7 @@ class AttendanceSummary:
 
     @property
     def rows(self) -> int:
+        """How many days in the period actually have an attendance row."""
         return len(self.dates_with_rows)
 
 

@@ -188,6 +188,7 @@ class Balance:
 
     @property
     def remaining(self) -> Decimal:
+        """Allocated minus taken. What approval is checked against."""
         return self.allocated - self.taken
 
     @property
@@ -262,6 +263,7 @@ def balances(
 
 
 def balance_for(db: Session, employee_id: int, type_id: int, on: date | None = None):
+    """One type's balance for one employee, or None if the type is inactive."""
     for balance in balances(db, employee_id, on):
         if balance.time_off_type_id == type_id:
             return balance
@@ -378,22 +380,27 @@ class LeaveDays:
 
     @property
     def paid_dates(self) -> frozenset[date]:
+        """Days of paid leave, ignoring how much of each was taken."""
         return frozenset(self.paid)
 
     @property
     def unpaid_dates(self) -> frozenset[date]:
+        """Days of unpaid leave, ignoring how much of each was taken."""
         return frozenset(self.unpaid)
 
     @property
     def all_dates(self) -> frozenset[date]:
+        """Every day carrying leave, paid or not."""
         return self.paid_dates | self.unpaid_dates
 
     @property
     def paid_days(self) -> Decimal:
+        """Total paid leave, counting a half day as 0.5."""
         return sum(self.paid.values(), Decimal("0.00"))
 
     @property
     def unpaid_days(self) -> Decimal:
+        """Total unpaid leave, counting a half day as 0.5."""
         return sum(self.unpaid.values(), Decimal("0.00"))
 
     def within(self, dates) -> tuple[Decimal, Decimal]:

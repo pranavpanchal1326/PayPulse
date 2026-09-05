@@ -34,6 +34,10 @@ if TYPE_CHECKING:
 
 
 class Employee(Base, TimestampMixin):
+    """A person on the roster: their HR record, not their login.
+
+    The login lives on User, which points here through employee_id.
+    """
     __tablename__ = "employee"
     __table_args__ = (
         CheckConstraint(
@@ -126,10 +130,12 @@ class Employee(Base, TimestampMixin):
 
     @property
     def full_name(self) -> str:
+        """First and last name, joined for display."""
         return f"{self.first_name} {self.last_name}".strip()
 
     @property
     def has_bank_details(self) -> bool:
+        """Whether payroll can pay this employee - both fields present."""
         return bool(self.bank_account and self.bank_ifsc)
 
     @property

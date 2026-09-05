@@ -1,3 +1,4 @@
+"""The employee record: roster, directory and profile (spec B1)."""
 from __future__ import annotations
 
 from datetime import date
@@ -8,6 +9,7 @@ from app.core.enums import EmployeeStatus, EmployeeType
 
 
 class EmployeeBase(BaseModel):
+    """Fields shared by creating and updating an employee."""
     first_name: str = Field(min_length=1, max_length=80)
     last_name: str = Field(min_length=1, max_length=80)
     work_email: EmailStr
@@ -24,12 +26,14 @@ class EmployeeBase(BaseModel):
 
     @model_validator(mode="after")
     def _exit_after_joining(self) -> EmployeeBase:
+        """Reject an exit date earlier than the joining date."""
         if self.date_of_exit and self.date_of_exit < self.date_of_joining:
             raise ValueError("date_of_exit cannot be before date_of_joining")
         return self
 
 
 class EmployeeCreate(EmployeeBase):
+    """A new employee. Their staff number is derived, never supplied."""
     pass
 
 
@@ -52,6 +56,7 @@ class EmployeeUpdate(BaseModel):
 
 
 class EmployeeOut(BaseModel):
+    """An employee as the roster and profile screens show them."""
     model_config = ConfigDict(from_attributes=True)
 
     id: int

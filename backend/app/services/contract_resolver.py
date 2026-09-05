@@ -53,6 +53,7 @@ class ContractResolution:
 
     @property
     def resolved(self) -> bool:
+        """Whether a contract was found for the day in question."""
         return self.contract is not None
 
     @property
@@ -66,6 +67,7 @@ class ContractResolution:
 
     @property
     def codes(self) -> list[WarningCode]:
+        """Just the warning codes, for callers that do not need the text."""
         return [w.code for w in self.warnings]
 
 

@@ -24,6 +24,7 @@ logger = logging.getLogger("paypulse.mailer")
 
 
 def _build_message(payslip: Payslip, content: bytes, extension: str) -> EmailMessage:
+    """Build one payslip email with the rendered document attached."""
     employee = payslip.employee
     period = f"{payslip.period_start:%B %Y}"
 

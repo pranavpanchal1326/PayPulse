@@ -41,6 +41,7 @@ class ScheduleLineLike(Protocol):
 
 
 def _minutes(value: time) -> int:
+    """A wall-clock time as minutes past midnight."""
     return value.hour * 60 + value.minute
 
 
@@ -80,6 +81,7 @@ def line_minutes(
 
 
 def line_hours(line: ScheduleLineLike) -> Decimal:
+    """One schedule line's paid hours, breaks and overnight spans included."""
     minutes = line_minutes(
         line.start_time,
         line.end_time,

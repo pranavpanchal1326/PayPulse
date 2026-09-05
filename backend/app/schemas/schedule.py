@@ -1,3 +1,4 @@
+"""Working schedules and their per-day lines (spec B1)."""
 from __future__ import annotations
 
 from datetime import time
@@ -8,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from app.core.enums import Weekday
 
 class WorkingScheduleLineIn(BaseModel):
+    """One working day as submitted: start, end and break."""
     # Monday is 0, matching Python's date.weekday(). Serialises as that
     # integer, so the weekly grid editor is unaffected.
     day_of_week: Weekday
@@ -17,6 +19,7 @@ class WorkingScheduleLineIn(BaseModel):
 
     @model_validator(mode="after")
     def _reject_zero_length(self) -> WorkingScheduleLineIn:
+        """Reject a working day whose start and end are the same time."""
         if self.start_time == self.end_time:
             raise ValueError(
                 "start_time and end_time are identical, which is a zero-length "
@@ -27,6 +30,7 @@ class WorkingScheduleLineIn(BaseModel):
 
 
 class WorkingScheduleLineOut(BaseModel):
+    """One working day as returned, with its hours worked out."""
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -40,17 +44,20 @@ class WorkingScheduleLineOut(BaseModel):
 
 
 class WorkingScheduleCreate(BaseModel):
+    """A new schedule and the days that make it up."""
     name: str = Field(min_length=1, max_length=120)
     lines: list[WorkingScheduleLineIn] = Field(default_factory=list)
 
 
 class WorkingScheduleUpdate(BaseModel):
+    """Changes to a schedule. Supplying lines replaces all of them."""
     name: str | None = Field(default=None, min_length=1, max_length=120)
     # Omit to leave the pattern alone; send a list to replace it wholesale.
     lines: list[WorkingScheduleLineIn] | None = None
 
 
 class WorkingScheduleOut(BaseModel):
+    """A schedule with its lines and derived weekly and daily hours."""
     model_config = ConfigDict(from_attributes=True)
 
     id: int

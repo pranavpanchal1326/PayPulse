@@ -1,3 +1,8 @@
+"""Salary structures and rules, payruns, payslips and warnings (A6, B5-B8).
+
+Money is serialised as a string throughout, never a float, so no amount
+loses paise on the way to the browser.
+"""
 from __future__ import annotations
 
 from datetime import date, datetime
@@ -20,6 +25,7 @@ from app.core.enums import (
 
 
 class SalaryRuleBase(BaseModel):
+    """Fields shared by creating and reading a salary rule."""
     code: str = Field(pattern=r"^[A-Z][A-Z0-9_]{1,19}$")
     name: str = Field(min_length=1, max_length=120)
     category: RuleCategory
@@ -36,6 +42,7 @@ class SalaryRuleBase(BaseModel):
 
     @model_validator(mode="after")
     def _amount_fields_match_the_type(self) -> SalaryRuleBase:
+        """Require the amount fields the chosen amount_type actually uses."""
         if self.amount_type is AmountType.FIXED and self.amount_fixed is None:
             raise ValueError("amount_fixed is required for a FIXED rule")
         if self.amount_type is AmountType.PERCENTAGE and (
@@ -51,10 +58,12 @@ class SalaryRuleBase(BaseModel):
 
 
 class SalaryRuleCreate(SalaryRuleBase):
+    """A new rule inside a structure."""
     structure_id: int
 
 
 class SalaryRuleUpdate(BaseModel):
+    """Changes to a rule. Omitted fields are left alone."""
     name: str | None = Field(default=None, min_length=1, max_length=120)
     category: RuleCategory | None = None
     sequence: int | None = Field(default=None, gt=0)
@@ -70,6 +79,7 @@ class SalaryRuleUpdate(BaseModel):
 
 
 class SalaryRuleOut(BaseModel):
+    """A rule as the editor and the payslip breakdown read it."""
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -90,12 +100,14 @@ class SalaryRuleOut(BaseModel):
 
 
 class ReorderRequest(BaseModel):
+    """New sequence for a structure's rules. Order decides what sees what."""
     """Drag-to-reorder (spec A5): ids in their new evaluation order."""
 
     rule_ids: list[int] = Field(min_length=1)
 
 
 class FormulaCheckRequest(BaseModel):
+    """A formula to validate before it is saved."""
     expression: str
     # Optional sample context so the author sees a real number, not just
     # "valid".
@@ -105,6 +117,7 @@ class FormulaCheckRequest(BaseModel):
 
 
 class FormulaCheckResponse(BaseModel):
+    """Whether a formula parses, and what it evaluates to on sample data."""
     valid: bool
     error: str | None = None
     sample_result: Decimal | None = None
@@ -115,6 +128,7 @@ class FormulaCheckResponse(BaseModel):
 
 
 class SalaryStructureCreate(BaseModel):
+    """A new salary structure."""
     name: str = Field(min_length=1, max_length=120)
     code: str = Field(pattern=r"^[A-Z][A-Z0-9_]{1,19}$")
     description: str | None = None
@@ -122,6 +136,7 @@ class SalaryStructureCreate(BaseModel):
 
 
 class SalaryStructureUpdate(BaseModel):
+    """Changes to a structure. Omitted fields are left alone."""
     name: str | None = Field(default=None, min_length=1, max_length=120)
     description: str | None = None
     currency: str | None = Field(default=None, min_length=3, max_length=3)
@@ -129,6 +144,7 @@ class SalaryStructureUpdate(BaseModel):
 
 
 class SalaryStructureOut(BaseModel):
+    """A structure with its ordered rules."""
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -146,6 +162,7 @@ class SalaryStructureOut(BaseModel):
 
 
 class EligibilityRequest(BaseModel):
+    """Ask who could be paid for a period, before creating the payrun."""
     salary_structure_id: int
     period_start: date
     period_end: date
@@ -154,6 +171,7 @@ class EligibilityRequest(BaseModel):
 
 
 class EligibilityOut(BaseModel):
+    """One employee's eligibility, with the reasons they are blocked."""
     employee_id: int
     name: str
     department: str | None = None
@@ -167,6 +185,7 @@ class EligibilityOut(BaseModel):
 
 
 class PayrunCreate(BaseModel):
+    """A new payrun: a structure, a period and who it covers."""
     name: str = Field(min_length=1, max_length=160)
     salary_structure_id: int
     period_start: date
@@ -175,6 +194,7 @@ class PayrunCreate(BaseModel):
 
 
 class MarkPaidRequest(BaseModel):
+    """Mark a validated payrun paid, with a reason if warnings are forced."""
     force: bool = False
     force_paid_reason: str | None = Field(default=None, max_length=500)
 
@@ -183,6 +203,7 @@ class MarkPaidRequest(BaseModel):
 
 
 class WarningOut(BaseModel):
+    """One payroll warning, its severity and the transition it blocks."""
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -202,6 +223,7 @@ class WarningOut(BaseModel):
 
 
 class PayslipLineOut(BaseModel):
+    """One computed line on a payslip: rule, quantity, rate and amount."""
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -215,6 +237,7 @@ class PayslipLineOut(BaseModel):
 
 
 class PayslipOut(BaseModel):
+    """A full payslip with every line, as the payslip screen renders it."""
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -251,6 +274,7 @@ class PayslipOut(BaseModel):
 
 
 class PayslipSummaryOut(BaseModel):
+    """A payslip without its lines, for lists and pickers."""
     id: int
     employee_id: int
     employee_name: str
@@ -267,6 +291,7 @@ class PayslipSummaryOut(BaseModel):
 
 
 class PayrunOut(BaseModel):
+    """A payrun with its totals and state."""
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -291,6 +316,7 @@ class PayrunOut(BaseModel):
 
 
 class PayrunDetailOut(PayrunOut):
+    """A payrun plus its payslips and warnings."""
     payslips: list[PayslipSummaryOut] = []
     warnings: list[WarningOut] = []
     # Pre-counted by severity so the cockpit header needs no client reduce.

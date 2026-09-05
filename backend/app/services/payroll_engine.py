@@ -33,6 +33,7 @@ EARNING_CATEGORIES = (RuleCategory.BASIC, RuleCategory.ALLOWANCE)
 
 
 def money(value: Decimal) -> Decimal:
+    """Round to paise, half-up. Every amount on a payslip goes through this."""
     return Decimal(value).quantize(_CENTS, rounding=ROUND_HALF_UP)
 
 
@@ -71,6 +72,7 @@ class ComputedPayslip:
 
     @property
     def visible_lines(self) -> list[ComputedLine]:
+        """Only the lines the payslip shows; intermediates stay hidden."""
         return [line for line in self.lines if line.appears_on_payslip]
 
 

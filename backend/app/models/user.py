@@ -12,6 +12,7 @@ from app.db.base import Base, TimestampMixin
 
 
 class User(Base, TimestampMixin):
+    """A login: credentials, role and the employee record it maps to."""
     __tablename__ = "app_user"  # "user" is reserved in PostgreSQL
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

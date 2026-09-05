@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
 
 class Department(Base, TimestampMixin):
+    """A team employees are grouped under, and reported on by."""
     __tablename__ = "department"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -31,6 +32,7 @@ class Department(Base, TimestampMixin):
 
 
 class JobPosition(Base, TimestampMixin):
+    """A job title, optionally scoped to one department."""
     __tablename__ = "job_position"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

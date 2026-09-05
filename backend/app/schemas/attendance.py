@@ -1,3 +1,4 @@
+"""Attendance rows, the check-in/out pair, and the period overview (B3)."""
 from __future__ import annotations
 
 from datetime import date, datetime
@@ -33,18 +34,21 @@ class AttendanceUpdate(BaseModel):
 
 
 class CheckInRequest(BaseModel):
+    """Start today's attendance. The time is taken from the server."""
     # Omit both to check in "now" as the calling employee.
     employee_id: int | None = None
     at: datetime | None = None
 
 
 class CheckOutRequest(BaseModel):
+    """Close today's open attendance row."""
     employee_id: int | None = None
     at: datetime | None = None
     break_minutes: int | None = Field(default=None, ge=0, lt=24 * 60)
 
 
 class AttendanceOut(BaseModel):
+    """One attendance day, with hours and status computed server-side."""
     model_config = ConfigDict(from_attributes=True)
 
     id: int

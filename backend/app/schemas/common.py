@@ -19,6 +19,7 @@ class Page(BaseModel, Generic[T]):
 
     @classmethod
     def build(cls, items: list[T], total: int, page: int, page_size: int) -> Page[T]:
+        """Wrap one page of rows, working out the page count."""
         pages = (total + page_size - 1) // page_size if page_size else 0
         return cls(
             items=items, total=total, page=page, pages=pages, page_size=page_size
@@ -26,4 +27,5 @@ class Page(BaseModel, Generic[T]):
 
 
 class Message(BaseModel):
+    """A bare human-readable result, where there is nothing else to return."""
     message: str

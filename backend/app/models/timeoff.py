@@ -116,6 +116,7 @@ class LeaveAllocation(Base, TimestampMixin):
     time_off_type: Mapped[TimeOffType] = relationship(back_populates="allocations")
 
     def covers(self, day: date) -> bool:
+        """Whether this allocation is valid on `day`."""
         if day < self.validity_from:
             return False
         return self.validity_to is None or day <= self.validity_to

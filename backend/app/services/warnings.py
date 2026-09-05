@@ -38,10 +38,12 @@ SEVERITY: dict[WarningCode, tuple[WarningSeverity, str | None]] = {
 
 
 def severity_of(code: WarningCode) -> WarningSeverity:
+    """The severity a warning code carries. Unlisted codes are WARNING."""
     return SEVERITY.get(code, (WarningSeverity.WARNING, None))[0]
 
 
 def blocks(code: WarningCode) -> str | None:
+    """The payrun transition this code blocks, or None if it only informs."""
     return SEVERITY.get(code, (WarningSeverity.WARNING, None))[1]
 
 
@@ -54,6 +56,18 @@ def record(
     payslip_id: int | None = None,
     employee_id: int | None = None,
 ) -> PayrollWarning:
+    """Attach one warning to a payrun.
+
+    Args:
+        payrun_id: The run the warning belongs to.
+        code: What went wrong. Its severity is looked up, not passed in.
+        message: Text shown to whoever reviews the run.
+        payslip_id: Set when the warning is about one payslip.
+        employee_id: Set when the warning is about one employee.
+
+    Returns:
+        The persisted warning.
+    """
     warning = PayrollWarning(
         payrun_id=payrun_id,
         payslip_id=payslip_id,

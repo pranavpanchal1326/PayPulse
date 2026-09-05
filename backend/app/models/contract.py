@@ -46,6 +46,11 @@ if TYPE_CHECKING:
 
 
 class Contract(Base, TimestampMixin):
+    """One employment term: a wage, a schedule and a date range.
+
+    An employee may hold several over time; the resolver picks whichever
+    covers the day being paid.
+    """
     __tablename__ = "contract"
     __table_args__ = (
         CheckConstraint("wage > 0", name="ck_contract_wage_positive"),
@@ -103,6 +108,7 @@ class Contract(Base, TimestampMixin):
 
     @property
     def is_open_ended(self) -> bool:
+        """Whether the contract has no end date."""
         return self.date_end is None
 
     def covers(self, day: date) -> bool:

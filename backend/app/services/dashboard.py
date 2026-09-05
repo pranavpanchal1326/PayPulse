@@ -54,6 +54,7 @@ LOW_BALANCE_DAYS = 3
 def _scoped_employees(
     department_id: int | None, employee_type
 ) -> Select:
+    """Ids of active employees matching the dashboard's filters."""
     stmt = select(Employee.id).where(Employee.status == EmployeeStatus.ACTIVE)
     if department_id is not None:
         stmt = stmt.where(Employee.department_id == department_id)

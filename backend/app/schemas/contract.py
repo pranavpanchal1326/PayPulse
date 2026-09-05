@@ -1,3 +1,4 @@
+"""Employment contracts and the resolution of which one applies (B2)."""
 from __future__ import annotations
 
 from datetime import date
@@ -9,6 +10,7 @@ from app.core.enums import ContractState, WarningCode
 
 
 class ContractBase(BaseModel):
+    """Fields shared by creating and reading a contract."""
     employee_id: int
     name: str | None = Field(
         default=None,
@@ -27,16 +29,19 @@ class ContractBase(BaseModel):
 
     @model_validator(mode="after")
     def _end_after_start(self) -> ContractBase:
+        """Reject a contract that ends before it starts."""
         if self.date_end and self.date_end < self.date_start:
             raise ValueError("date_end cannot be before date_start")
         return self
 
 
 class ContractCreate(ContractBase):
+    """A new contract for one employee."""
     pass
 
 
 class ContractUpdate(BaseModel):
+    """Changes to a contract. Omitted fields are left alone."""
     name: str | None = Field(default=None, max_length=160)
     wage: Decimal | None = Field(default=None, gt=0, max_digits=12, decimal_places=2)
     currency: str | None = Field(default=None, min_length=3, max_length=3)
@@ -50,6 +55,7 @@ class ContractUpdate(BaseModel):
 
 
 class ContractOut(BaseModel):
+    """A contract, with the employee and schedule it names resolved."""
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -75,6 +81,7 @@ class ContractOut(BaseModel):
 
 
 class ResolutionWarningOut(BaseModel):
+    """One reason a contract lookup was ambiguous or came back empty."""
     code: WarningCode
     message: str
 
