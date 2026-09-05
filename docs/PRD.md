@@ -6,7 +6,7 @@
 
 **Version 3.0** · supersedes v2 and v1 (v1 archived at `docs/PRD-v1.md`, git `b618137`)
 Team: **Aditya** (backend) · **Pranav** (frontend) · Odoo Hackathon · ~36–48h build window
-Status: **B0 + B1 + B2 shipped.** B0 = scaffold, Compose, JWT, RBAC matrix (`99bfacc`). B1 = departments, job positions, working schedules with computed hours, and the Employee hub (`d9bc2d3`). B2 = contracts, the Postgres exclusion constraint, and the contract resolver. **B2.5 (`calendar.py`) is next** and is the T+14h gate.
+Status: **B0 through B2.5 shipped — the T+14h gate is met.** B0 = scaffold, Compose, JWT, RBAC (`99bfacc`). B1 = org master data, schedules with computed hours, the Employee hub (`d9bc2d3`). B2 = contracts, the Postgres exclusion constraint, the contract resolver (`8e38ee0`). B2.5 = `calendar.py` and the public holiday table: `period_days` and `contract_days` are now computed in one place, with 38 unit tests and 24 DB assertions. **B3 (attendance) is next.**
 
 ---
 
@@ -1052,11 +1052,11 @@ The brief requires this as a deliverable: *"Brief summary of proposed enhancemen
 
 ## 15. Next Actions
 
-B0, B1 and B2 are shipped. In order:
+B0, B1, B2 and B2.5 are shipped — the foundation every payroll number is derived from is done and tested. In order:
 
-1. ~~**B1** — Employee, Department, JobPosition, WorkingSchedule + computed hours; `/employees/{id}/summary`~~ ✅
+1. ~~**B1** — Employee, Department, JobPosition, WorkingSchedule + computed hours~~ ✅
 2. ~~**B2** — Contract with the exclusion constraint, `contract_resolver` returning a **single** contract plus a `MULTI_CONTRACT_PERIOD` warning~~ ✅
-3. **B2.5 — `calendar.py`**, the T+14h gate: the public holiday table plus `period_days` / `contract_days`. Every day number in the product is downstream of this, so it lands with its own test file before anything consumes it.
-4. Drop `AttendanceStatus.ABSENT` from `app/core/enums.py`; add `AbsencePolicy`
+3. ~~**B2.5** — `calendar.py`, the public holiday table, `period_days` / `contract_days`~~ ✅
+4. **B3 — attendance.** Drop `AttendanceStatus.ABSENT` from `app/core/enums.py` (absence is derived, §3.4); midnight-safe `worked_hours`; the manual-correction audit fields. Add `AbsencePolicy` alongside it.
 5. Publish the updated `openapi.json` and ping Pranav with the §5 deltas (balances `pending`, payrun `reopen`/`cancel`, role-filtered dashboard, `?scope=my_team`, and B2's `/contracts/resolve`)
 6. **B5 by hour 10** — sandbox + engine + `time_basis`, with `test_lwp_charged_once` and `test_special_allowance_nonzero` written *first*

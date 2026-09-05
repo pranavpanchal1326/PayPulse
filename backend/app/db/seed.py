@@ -27,6 +27,7 @@ from app.core.enums import ContractState, EmployeeType, Role
 from app.core.security import hash_password
 from app.models.contract import Contract
 from app.models.employee import Employee
+from app.models.holiday import PublicHoliday
 from app.models.organization import Department, JobPosition
 from app.models.schedule import WorkingSchedule, WorkingScheduleLine
 from app.models.user import User
@@ -160,6 +161,30 @@ SEED_CONTRACTS: list[tuple[str, str, date, date | None, ContractState]] = [
         "employee@paypulse.app", "55000.00",
         date(2026, 9, 16), None, ContractState.RUNNING,
     ),
+]
+
+
+# Indian public holidays. Fixed-date national holidays (Republic Day,
+# Independence Day, Gandhi Jayanti, Christmas) are exact; the lunar-calendar
+# festivals are APPROXIMATE - this is demo data, not an authoritative
+# calendar. Confirm against a real almanac before anyone is paid from it.
+#
+# Two of these deliberately fall on a weekend (Independence Day 2026 is a
+# Saturday, Diwali a Sunday). A holiday on a non-working day must not change
+# period_days, and the seed carries the case so that stays visible.
+SEED_HOLIDAYS: list[tuple[date, str, bool]] = [
+    (date(2026, 1, 1), "New Year's Day", True),      # optional/restricted
+    (date(2026, 1, 26), "Republic Day", False),      # Monday
+    (date(2026, 3, 4), "Holi (approx)", False),      # Wednesday
+    (date(2026, 3, 21), "Eid al-Fitr (approx)", False),   # Saturday
+    (date(2026, 4, 14), "Ambedkar Jayanti", False),  # Tuesday
+    (date(2026, 5, 1), "Maharashtra Day", False),    # Friday
+    (date(2026, 8, 15), "Independence Day", False),  # Saturday
+    (date(2026, 10, 2), "Gandhi Jayanti", False),    # Friday
+    (date(2026, 10, 20), "Dussehra (approx)", False),     # Tuesday
+    (date(2026, 11, 8), "Diwali (approx)", False),   # Sunday
+    (date(2026, 11, 24), "Guru Nanak Jayanti (approx)", False),
+    (date(2026, 12, 25), "Christmas Day", False),    # Friday
 ]
 
 
@@ -318,6 +343,26 @@ def seed_contracts(db: Session, employees: dict[str, Employee]) -> None:
     )
 
 
+def seed_holidays(db: Session) -> None:
+    for day, name, is_optional in SEED_HOLIDAYS:
+        row = db.scalar(
+            select(PublicHoliday).where(PublicHoliday.date == day)
+        )
+        if row is None:
+            row = PublicHoliday(date=day)
+            db.add(row)
+        row.name = name
+        row.is_optional = is_optional
+    db.flush()
+
+    counted = sum(1 for d, _, opt in SEED_HOLIDAYS if not opt and d.weekday() < 5)
+    logger.info(
+        "  holidays           %d (%d fall on a Mon-Fri working day)",
+        len(SEED_HOLIDAYS),
+        counted,
+    )
+
+
 def main() -> None:
     # Imported lazily so the module-level fixtures can be introspected by
     # tests without constructing an engine (and therefore needing psycopg).
@@ -331,6 +376,7 @@ def main() -> None:
         schedules = seed_schedules(db)
         employees = seed_employees(db, departments, positions, schedules)
         seed_contracts(db, employees)
+        seed_holidays(db)
         db.commit()
     logger.info("Done. All demo accounts use the password: %s", DEMO_PASSWORD)
 
