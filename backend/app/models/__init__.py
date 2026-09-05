@@ -8,6 +8,7 @@ from app.models.employee import Employee
 from app.models.holiday import PublicHoliday
 from app.models.organization import Department, JobPosition
 from app.models.schedule import WorkingSchedule, WorkingScheduleLine
+from app.models.timeoff import LeaveAllocation, TimeOffRequest, TimeOffType
 from app.models.user import User
 
 __all__ = [
@@ -16,7 +17,10 @@ __all__ = [
     "Department",
     "Employee",
     "JobPosition",
+    "LeaveAllocation",
     "PublicHoliday",
+    "TimeOffRequest",
+    "TimeOffType",
     "User",
     "WorkingSchedule",
     "WorkingScheduleLine",

@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from app.models.contract import Contract
     from app.models.organization import Department, JobPosition
     from app.models.schedule import WorkingSchedule
+    from app.models.timeoff import LeaveAllocation, TimeOffRequest
 
 
 class Employee(Base, TimestampMixin):
@@ -113,6 +114,14 @@ class Employee(Base, TimestampMixin):
         back_populates="employee",
         cascade="all, delete-orphan",
         order_by="Attendance.work_date.desc()",
+    )
+    allocations: Mapped[list[LeaveAllocation]] = relationship(
+        back_populates="employee", cascade="all, delete-orphan"
+    )
+    time_off_requests: Mapped[list[TimeOffRequest]] = relationship(
+        back_populates="employee",
+        cascade="all, delete-orphan",
+        order_by="TimeOffRequest.date_from.desc()",
     )
 
     @property

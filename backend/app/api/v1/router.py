@@ -7,6 +7,7 @@ from app.api.v1 import (
     contracts,
     employees,
     organization,
+    timeoff,
     working_schedules,
 )
 
@@ -17,3 +18,4 @@ api_router.include_router(working_schedules.router)
 api_router.include_router(employees.router)
 api_router.include_router(contracts.router)
 api_router.include_router(attendances.router)
+api_router.include_router(timeoff.router)

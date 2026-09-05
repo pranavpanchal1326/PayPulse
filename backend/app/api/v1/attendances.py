@@ -37,7 +37,13 @@ from app.schemas.attendance import (
     CheckOutRequest,
 )
 from app.schemas.common import Page
-from app.services import attendance_service, calendar, contract_resolver, schedule_calc
+from app.services import (
+    attendance_service,
+    calendar,
+    contract_resolver,
+    leave_engine,
+    schedule_calc,
+)
 
 router = APIRouter(prefix="/attendances", tags=["attendance"])
 
@@ -159,16 +165,26 @@ def overview(
     basis = calendar.basis_for(db, employee, contract, period_start, period_end)
     summary = attendance_service.summarise(db, target, period_start, period_end)
 
-    # leave_dates arrives in B4; until then every uncovered scheduled day
-    # reads as absent, which is correct for the data that exists.
+    # Approved leave is not absence. B4 supplies these dates; before it
+    # landed this was an empty set and every leave day read as absent.
+    leave = leave_engine.approved_leave_days(
+        db, employee, period_start, period_end
+    )
     absent = attendance_service.absent_dates(
         basis.contract_dates,
         summary.dates_with_rows,
-        frozenset(),
+        leave.all_dates,
         settings.PAYROLL_ABSENCE_POLICY,
     )
 
-    covered = len(set(basis.contract_dates) & summary.dates_with_rows)
+    contract_dates = set(basis.contract_dates)
+    covered = len(contract_dates & summary.dates_with_rows)
+    # Spec B9 "coverage": how much of the schedule is accounted for, whether
+    # the employee was present or excused.
+    accounted = len(contract_dates & (summary.dates_with_rows | leave.all_dates))
+    # A record on a day already covered by approved leave. Leave wins for the
+    # pay basis; the row still counts for overtime (PRD section 3.4).
+    on_leave_day = len(summary.dates_with_rows & leave.all_dates)
     return AttendanceOverview(
         employee_id=target,
         period_start=period_start,
@@ -177,6 +193,9 @@ def overview(
         contract_days=basis.contract_days,
         days_with_records=summary.rows,
         absent_days=len(absent),
+        paid_leave_days=leave.paid_days,
+        unpaid_leave_days=leave.unpaid_days,
+        attendance_on_leave_days=on_leave_day,
         present=summary.present,
         late=summary.late,
         overtime_days=summary.overtime_days,
@@ -185,6 +204,11 @@ def overview(
         worked_hours=summary.worked_hours,
         overtime_hours=summary.overtime_hours,
         coverage_pct=(
+            round(100 * accounted / basis.contract_days, 2)
+            if basis.contract_days
+            else 0.0
+        ),
+        present_pct=(
             round(100 * covered / basis.contract_days, 2)
             if basis.contract_days
             else 0.0

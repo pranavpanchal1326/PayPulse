@@ -6,7 +6,7 @@
 
 **Version 3.0** · supersedes v2 and v1 (v1 archived at `docs/PRD-v1.md`, git `b618137`)
 Team: **Aditya** (backend) · **Pranav** (frontend) · Odoo Hackathon · ~36–48h build window
-Status: **B0 through B3 shipped.** B0 = scaffold, Compose, JWT, RBAC (`99bfacc`). B1 = org master data, schedules with computed hours, the Employee hub (`d9bc2d3`). B2 = contracts, the Postgres exclusion constraint, the contract resolver (`8e38ee0`). B2.5 = `calendar.py` and public holidays (`5b6a959`). B3 = attendance with midnight-safe `worked_hours`, derived absence, and attributed manual corrections. **B4 (time off) is next** — it supplies the leave dates that complete `absent_days` and the pay basis.
+Status: **B0 through B4 shipped — the whole pay basis now exists.** B0 = scaffold, Compose, JWT, RBAC (`99bfacc`). B1 = org master data, schedules, the Employee hub (`d9bc2d3`). B2 = contracts + exclusion constraint + resolver (`8e38ee0`). B2.5 = `calendar.py` and holidays (`5b6a959`). B3 = attendance, midnight-safe hours, derived absence (`6bf0c05`). B4 = time off types, allocations, requests, schedule-aware durations and the paid/unpaid split. **B5 — the payroll engine — is next, and is the longest pole.**
 
 ---
 
@@ -810,7 +810,7 @@ Pranav then builds against **MSW mocks** derived from those types. **Result: Pra
 | ~~B2~~ | ~~Contract + exclusion constraint + `contract_resolver` (**single contract + warning**)~~ | ~~2.5~~ | ✅ **shipped** — 24 resolver unit tests + 52 API assertions |
 | B2.5 | **`calendar.py`** — holidays + `period_days` / `contract_days` | 1.5 | ⭐ every day number comes from here |
 | ~~B3~~ | ~~Attendance + derived status + `worked_hours` (midnight-safe) + manual-edit fields~~ | ~~3~~ | ✅ **shipped** — `ABSENT` dropped; 41 unit tests + 67 API assertions |
-| B4 | TimeOffType, Allocation, Request, `leave_engine` (schedule-aware duration, block-on-over-balance, cancel) | 4 | |
+| ~~B4~~ | ~~TimeOffType, Allocation, Request, `leave_engine` (schedule-aware duration, block-on-over-balance, cancel)~~ | ~~4~~ | ✅ **shipped** — 17 unit tests + 79 API assertions |
 | B5 | **`formula.py` sandbox + `payroll_engine.py` + `time_basis.py`** | 6 | ⚠ longest pole — start by hr 10 |
 | B6 | SalaryStructure / Rule CRUD + reorder + validate-formula + forward-ref check | 3 | |
 | B7 | Payrun lifecycle (compute/validate/mark-paid/reopen/cancel), eligible-employees preview, warnings engine | 4.5 | |
@@ -1058,6 +1058,6 @@ B0, B1, B2 and B2.5 are shipped — the foundation every payroll number is deriv
 2. ~~**B2** — Contract with the exclusion constraint, `contract_resolver` returning a **single** contract plus a `MULTI_CONTRACT_PERIOD` warning~~ ✅
 3. ~~**B2.5** — `calendar.py`, the public holiday table, `period_days` / `contract_days`~~ ✅
 4. ~~**B3** — attendance: `ABSENT` dropped, midnight-safe `worked_hours`, manual-correction audit fields, `AbsencePolicy`~~ ✅
-5. **B4 — time off.** Types, allocations, requests, schedule- and holiday-aware `duration_days`, block-on-over-balance, cancel. This closes the last input to the pay basis: `absent_dates()` already accepts `leave_dates` and currently receives an empty set.
+5. ~~**B4** — time off: types, allocations, requests, schedule- and holiday-aware `duration_days`, block-on-over-balance, cancel~~ ✅
 6. Publish the updated `openapi.json` and ping Pranav with the §5 deltas (balances `pending`, payrun `reopen`/`cancel`, role-filtered dashboard, `?scope=my_team`, and B2's `/contracts/resolve`)
-7. **B5** — sandbox + engine + `time_basis`, with `test_lwp_charged_once` and `test_special_allowance_nonzero` written *first*
+7. **B5 — the payroll engine.** `formula.py` (AST allowlist sandbox), `time_basis.py` (assembles §4.2 from calendar + attendance + leave, all of which now exist), and `payroll_engine.py`. Write `test_lwp_charged_once` and `test_special_allowance_nonzero` *first* — they pin the two defects v1 shipped.

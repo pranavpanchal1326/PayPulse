@@ -24,7 +24,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.enums import ContractState, EmployeeType, Role
+from app.core.enums import ContractState, EmployeeType, LeaveUnit, RequestState, Role
 from app.core.security import hash_password
 from app.models.attendance import Attendance
 from app.models.contract import Contract
@@ -32,10 +32,12 @@ from app.models.employee import Employee
 from app.models.holiday import PublicHoliday
 from app.models.organization import Department, JobPosition
 from app.models.schedule import WorkingSchedule, WorkingScheduleLine
+from app.models.timeoff import LeaveAllocation, TimeOffRequest, TimeOffType
 from app.models.user import User
 from app.services import (
     attendance_service,
     employee_service,
+    leave_engine,
     schedule_calc,
 )
 from app.services import (
@@ -212,6 +214,30 @@ P_LATE = 0.10
 P_MISSING_CHECKOUT = 0.04
 P_OVERTIME = 0.12
 P_MANUAL_EDIT = 0.03
+
+
+# (code, name, unit, is_paid, requires_allocation, colour)
+# The unpaid type is how leave reaches payroll as an LWP deduction: v3
+# blocks approval past a balance rather than reclassifying the excess, so
+# unpaid leave is a *type* choice, not a balance overflow (PRD section 3.6).
+SEED_LEAVE_TYPES: list[tuple[str, str, LeaveUnit, bool, bool, str]] = [
+    ("AL", "Annual Leave", LeaveUnit.DAYS, True, True, "#2563eb"),
+    ("SL", "Sick Leave", LeaveUnit.DAYS, True, True, "#dc2626"),
+    ("CL", "Casual Leave", LeaveUnit.DAYS, True, True, "#16a34a"),
+    ("LWP", "Unpaid Leave", LeaveUnit.DAYS, False, False, "#78716c"),
+    ("COMP", "Compensatory Off", LeaveUnit.HOURS, True, True, "#a855f7"),
+]
+
+# (user email, type code, days, validity_from, validity_to)
+SEED_ALLOCATIONS: list[tuple[str, str, str, date, date]] = [
+    ("admin@paypulse.app", "AL", "18", date(2026, 1, 1), date(2026, 12, 31)),
+    ("payroll.manager@paypulse.app", "AL", "18", date(2026, 1, 1), date(2026, 12, 31)),
+    ("payroll.user@paypulse.app", "AL", "15", date(2026, 1, 1), date(2026, 12, 31)),
+    ("hr.manager@paypulse.app", "AL", "18", date(2026, 1, 1), date(2026, 12, 31)),
+    ("employee@paypulse.app", "AL", "12", date(2026, 1, 1), date(2026, 12, 31)),
+    ("employee@paypulse.app", "SL", "8", date(2026, 1, 1), date(2026, 12, 31)),
+    ("payroll.user@paypulse.app", "SL", "8", date(2026, 1, 1), date(2026, 12, 31)),
+]
 
 
 def seed_users(db: Session) -> None:
@@ -413,7 +439,18 @@ def seed_attendance(db: Session, employees: dict[str, Employee]) -> None:
         for day in work_days:
             if day < employee.date_of_joining:
                 continue
-            if rng.random() < P_ABSENT:
+
+            # Every draw for this day happens up front, BEFORE any decision
+            # to skip. Consuming a different number of values depending on
+            # what is already in the database would shift the stream and
+            # produce a different shape on each re-run.
+            is_absent = rng.random() < P_ABSENT
+            late_by = rng.randint(25, 75) if rng.random() < P_LATE else 0
+            no_checkout = rng.random() < P_MISSING_CHECKOUT
+            extra = rng.randint(60, 180) if rng.random() < P_OVERTIME else 0
+            manual = rng.random() < P_MANUAL_EDIT
+
+            if is_absent:
                 skipped += 1  # a deliberate gap -> derived absence
                 continue
 
@@ -427,18 +464,15 @@ def seed_attendance(db: Session, employees: dict[str, Employee]) -> None:
                 continue
 
             start = attendance_service.scheduled_start_for(schedule, day)
-            late_by = rng.randint(25, 75) if rng.random() < P_LATE else 0
             check_in = datetime.combine(
                 day, start, tzinfo=attendance_service.app_timezone()
             ) + timedelta(minutes=late_by)
 
-            if rng.random() < P_MISSING_CHECKOUT:
-                check_out = None
-            else:
-                extra = rng.randint(60, 180) if rng.random() < P_OVERTIME else 0
-                check_out = check_in + timedelta(
-                    hours=float(daily), minutes=60 + extra
-                )
+            check_out = (
+                None
+                if no_checkout
+                else check_in + timedelta(hours=float(daily), minutes=60 + extra)
+            )
 
             row = Attendance(
                 employee_id=employee.id,
@@ -452,7 +486,7 @@ def seed_attendance(db: Session, employees: dict[str, Employee]) -> None:
             attendance_service.recompute(row, schedule, daily)
             row.is_holiday = row.work_date in holidays
 
-            if rng.random() < P_MANUAL_EDIT:
+            if manual:
                 row.is_manual_edit = True
                 row.edited_by_id = admin.id if admin else None
                 row.edit_reason = "Corrected after employee reported a missed swipe"
@@ -480,6 +514,105 @@ def seed_attendance(db: Session, employees: dict[str, Employee]) -> None:
     )
 
 
+def seed_leave(db: Session, employees: dict[str, Employee]) -> None:
+    types: dict[str, TimeOffType] = {}
+    for code, name, unit, is_paid, requires_allocation, color in SEED_LEAVE_TYPES:
+        row = db.scalar(select(TimeOffType).where(TimeOffType.code == code))
+        if row is None:
+            row = TimeOffType(code=code)
+            db.add(row)
+        row.name = name
+        row.unit = unit
+        row.is_paid = is_paid
+        row.requires_allocation = requires_allocation
+        row.color = color
+        row.is_active = True
+        types[code] = row
+    db.flush()
+
+    for email, code, days, valid_from, valid_to in SEED_ALLOCATIONS:
+        employee = employees[email]
+        row = db.scalar(
+            select(LeaveAllocation).where(
+                LeaveAllocation.employee_id == employee.id,
+                LeaveAllocation.time_off_type_id == types[code].id,
+                LeaveAllocation.validity_from == valid_from,
+            )
+        )
+        if row is None:
+            row = LeaveAllocation(
+                employee_id=employee.id,
+                time_off_type_id=types[code].id,
+                validity_from=valid_from,
+            )
+            db.add(row)
+        row.days = Decimal(days)
+        row.validity_to = valid_to
+        # Approved, so the balance is actually available (spec A4).
+        row.state = RequestState.APPROVED
+    db.flush()
+
+    # A handful of requests across states, all in the recent past so they
+    # overlap the seeded attendance window and show up in the pay basis.
+    today = date.today()
+    plan: list[tuple[str, str, int, int, RequestState]] = [
+        # (email, type code, days ago start, days ago end, state)
+        ("employee@paypulse.app", "AL", 24, 22, RequestState.APPROVED),
+        ("employee@paypulse.app", "LWP", 16, 16, RequestState.APPROVED),
+        ("payroll.user@paypulse.app", "SL", 12, 11, RequestState.APPROVED),
+        ("payroll.manager@paypulse.app", "AL", 8, 7, RequestState.APPROVED),
+        ("employee@paypulse.app", "AL", -14, -12, RequestState.TO_APPROVE),
+        ("payroll.user@paypulse.app", "AL", -21, -21, RequestState.REFUSED),
+    ]
+
+    approver = db.scalar(select(User).where(User.email == "hr.manager@paypulse.app"))
+    created = 0
+    for email, code, start_ago, end_ago, state in plan:
+        employee = employees[email]
+        date_from = today - timedelta(days=start_ago)
+        date_to = today - timedelta(days=end_ago)
+        if db.scalar(
+            select(TimeOffRequest).where(
+                TimeOffRequest.employee_id == employee.id,
+                TimeOffRequest.date_from == date_from,
+            )
+        ):
+            continue
+        try:
+            days, hours = leave_engine.compute_duration(
+                db, employee, types[code], date_from, date_to
+            )
+        except Exception:
+            # A span that lands entirely on weekends or holidays; skip it
+            # rather than seeding a request with no working days.
+            continue
+        db.add(
+            TimeOffRequest(
+                employee_id=employee.id,
+                time_off_type_id=types[code].id,
+                date_from=date_from,
+                date_to=date_to,
+                duration_days=days,
+                duration_hours=hours,
+                state=state,
+                reason=f"Seeded {code} request",
+                approver_id=(
+                    approver.id
+                    if approver and state is not RequestState.TO_APPROVE
+                    else None
+                ),
+            )
+        )
+        created += 1
+    db.flush()
+    logger.info(
+        "  leave              %d types, %d allocations, %d requests",
+        len(SEED_LEAVE_TYPES),
+        len(SEED_ALLOCATIONS),
+        created,
+    )
+
+
 def main() -> None:
     # Imported lazily so the module-level fixtures can be introspected by
     # tests without constructing an engine (and therefore needing psycopg).
@@ -495,6 +628,7 @@ def main() -> None:
         seed_contracts(db, employees)
         seed_holidays(db)
         seed_attendance(db, employees)
+        seed_leave(db, employees)
         db.commit()
     logger.info("Done. All demo accounts use the password: %s", DEMO_PASSWORD)
 

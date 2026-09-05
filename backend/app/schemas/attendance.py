@@ -80,6 +80,12 @@ class AttendanceOverview(BaseModel):
     # Derived, never a row status: scheduled days with no record and no
     # approved leave (PRD section 3.4).
     absent_days: int
+    # Approved leave in the period, split the way the pay basis needs it.
+    paid_leave_days: int = 0
+    unpaid_leave_days: int = 0
+    # A record on a day already covered by leave. Leave wins for pay; the
+    # hours still count towards overtime.
+    attendance_on_leave_days: int = 0
 
     present: int
     late: int
@@ -89,5 +95,8 @@ class AttendanceOverview(BaseModel):
 
     worked_hours: Decimal
     overtime_hours: Decimal
+    # Share of scheduled days accounted for, present OR excused by leave.
     coverage_pct: float
+    # Share actually worked - coverage minus the excused days.
+    present_pct: float = 0.0
     absence_policy: str

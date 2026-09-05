@@ -162,9 +162,27 @@ def _attendance_source():
     return Attendance, Attendance.employee_id
 
 
+def _request_source():
+    try:
+        from app.models.timeoff import TimeOffRequest
+    except ImportError:
+        return None, None
+    return TimeOffRequest, TimeOffRequest.employee_id
+
+
+def _allocation_source():
+    try:
+        from app.models.timeoff import LeaveAllocation
+    except ImportError:
+        return None, None
+    return LeaveAllocation, LeaveAllocation.employee_id
+
+
 # Populated as each block lands. Keeping the wiring declarative means adding a
 # module is one line here rather than an edit to summary_counts itself.
 _SUMMARY_SOURCES = {
     "contracts": _contract_source,
     "attendances": _attendance_source,
+    "time_off_requests": _request_source,
+    "allocations": _allocation_source,
 }
