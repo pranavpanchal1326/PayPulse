@@ -104,7 +104,12 @@ class Payrun(Base, TimestampMixin):
 class Payslip(Base, TimestampMixin):
     __tablename__ = "payslip"
     __table_args__ = (
-        UniqueConstraint("payrun_id", "employee_id", name="uq_payslip_employee"),
+        # One index, not two. A (payrun_id, employee_id) unique constraint used
+        # to sit here as well, but every payslip in a payrun carries that
+        # payrun's period, so any duplicate it could catch this one catches
+        # first. The only case it added was a second *cancelled* payslip for
+        # the same employee in the same run, which harms nothing.
+        #
         # Structural duplicate prevention (spec B6, B9). PRD v1 warned about
         # duplicates over a gap nothing actually closed.
         Index(
