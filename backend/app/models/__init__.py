@@ -8,6 +8,7 @@ from app.models.employee import Employee
 from app.models.holiday import PublicHoliday
 from app.models.organization import Department, JobPosition
 from app.models.payroll import PayrollWarning, Payrun, Payslip, PayslipLine
+from app.models.ratelimit import RateLimit
 from app.models.salary import SalaryRule, SalaryStructure
 from app.models.schedule import WorkingSchedule, WorkingScheduleLine
 from app.models.timeoff import LeaveAllocation, TimeOffRequest, TimeOffType
@@ -25,6 +26,7 @@ __all__ = [
     "Payslip",
     "PayslipLine",
     "PublicHoliday",
+    "RateLimit",
     "SalaryRule",
     "SalaryStructure",
     "TimeOffRequest",
