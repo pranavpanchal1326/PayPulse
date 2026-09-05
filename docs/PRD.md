@@ -4,9 +4,9 @@
 > brief we are building against; it appears throughout this document only when
 > quoting or citing that brief.
 
-**Version 3.0** · supersedes v2 and v1 (v1 archived at `docs/PRD-v1.md`, git `b618137`)
+**Version 3.0** · supersedes v2 and v1 (v1 lives in git history at `b618137`)
 Team: **Aditya** (backend) · **Pranav** (frontend) · Odoo Hackathon · ~36–48h build window
-Status: **The backend is complete — B0 through B10 shipped.** 19 tables, 55 endpoints, 446 unit tests and 366 API assertions across six smoke suites. The engine computes ordered salary rules against a pay basis derived from contracts, schedules, holidays, attendance and leave; payruns move DRAFT → COMPUTED → VALIDATED → PAID with warnings gating each transition; payslips render as real PDFs and email in bulk; the dashboard aggregates live. **Next: the frontend, and scaling the seed for the demo (§9).**
+Status: **Backend and frontend both complete.** 20 tables, 57 routes, 75 operations, 449 unit tests and 400 API assertions across seven smoke suites. The engine computes ordered salary rules against a pay basis derived from contracts, schedules, holidays, attendance and leave; payruns move DRAFT → COMPUTED → VALIDATED → PAID with warnings gating each transition; payslips render as real PDFs and email in bulk; the dashboard aggregates live. **Next: demo readiness — see [RUNBOOK.md](RUNBOOK.md).**
 
 ---
 

@@ -1451,7 +1451,7 @@ At the end of every phase, before starting the next:
 1. Run the **blueprint §21 quality bar** honestly. A failed item blocks the exit.
 2. Run the **state matrix check** — loading, empty, filtered-empty, error, permission-denied.
 3. Run the **role pass** for any screen the phase touched.
-4. Record any backend swap still outstanding in `docs/api-contract.md`.
+4. Regenerate `schema.d.ts` if the backend shipped a router this phase.
 5. Note what the phase taught us. If the material or a token needs to change,
    change it in `tokens.css` — never locally in a component.
 
@@ -1461,11 +1461,19 @@ At the end of every phase, before starting the next:
 
 | | |
 |---|---|
-| **Current phase** | **P15 · Demo readiness** — the frontend's half is done; the rest waits on the backend |
+| **Current phase** | **P15 · Demo readiness** — everything that can be automated is done |
 | Blueprint | ✅ complete |
 | Build plan | ✅ complete |
-| Backend | **B0 shipped · B1–B10 open** — and this is now the only thing in the way |
-| Frontend | **P0–P13 ✅** · **P14 ✅** (two items need a person, one needs a decision) · **P15** — 3 of 6, the other 3 blocked on B1–B10 |
+| Backend | **B0–B10 ✅ shipped** (plus B11–B15 hardening) — 20 tables, 57 routes, 449 unit tests, 400 API assertions |
+| Frontend | **P0–P14 ✅** · **P15** — the remaining items need a person or a decision, not code |
+
+> **This table was stale and is now corrected.** It read "B1–B10 open" long
+> after the backend shipped, and the dependency map below still describes the
+> frontend as running on fixtures. It runs on the real API — every section was
+> walked against a live stack. Three P15 items previously marked "blocked on
+> the backend" are satisfied: Mailpit delivery is verified, the multi-contract
+> beat computes (on the **July** payrun), and the seed reset is one idempotent
+> command.
 
 **Verified at P14/P15 in a browser, not assumed:**
 
