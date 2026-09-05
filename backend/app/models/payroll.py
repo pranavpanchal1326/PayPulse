@@ -26,7 +26,6 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
-    UniqueConstraint,
 )
 from sqlalchemy import (
     Enum as SAEnum,

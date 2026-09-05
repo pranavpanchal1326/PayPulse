@@ -70,12 +70,12 @@ const ProvingGround = lazy(() =>
 );
 
 /**
- * **The landing page is one lazy chunk, and it must stay that way.** It
- * imports the P3 fixture dataset — thirty employees, three thousand
- * attendance rows, seven payruns — because that is where the honest figures
- * live, and it lazily pulls `three` + `@react-three/fiber` on top of that.
- * None of that may reach the application shell, which has its own §19
- * budget to keep. This route loads the module; nothing else imports it.
+ * **The landing page is one lazy chunk, and it must stay that way.** Its
+ * figures come from one `/demo/story` request against the real database (see
+ * `landing/story.ts`), and it lazily pulls `three` + `@react-three/fiber` on
+ * top of that. None of that may reach the application shell, which has its
+ * own §19 budget to keep. This route loads the module; nothing else imports
+ * it.
  */
 const Landing = lazy(() => import("@/landing/Landing"));
 
