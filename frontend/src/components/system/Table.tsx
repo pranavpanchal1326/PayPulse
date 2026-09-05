@@ -103,8 +103,21 @@ export function Table<T>({
 
   return (
     <Well className="pp-table-well">
+      {/*
+        The scroll container needs to be a focusable region, not just a
+        scrolling box. A keyboard-only user has no other way to reach columns
+        or rows that are outside it — there is nothing tabbable in a cell of
+        plain text to carry them there — and axe flags it as
+        `scrollable-region-focusable`. `tabindex={0}` makes the arrow keys
+        work; `role="region"` plus the caption as its name means a screen
+        reader announces what it has landed in rather than "group".
+        Found by the P14 accessibility pass.
+      */}
       <div
         ref={scrollRef}
+        role="region"
+        aria-label={caption}
+        tabIndex={0}
         style={{ maxHeight, overflow: "auto" }}
       >
         <table

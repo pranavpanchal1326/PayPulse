@@ -71,14 +71,26 @@ export function Act03Leave() {
           </p>
         </ActHead>
 
-        {/* The chain. Five links, revealed in order, and nothing else moves. */}
+        {/*
+          The chain. Five links, revealed in order, and nothing else moves.
+
+          **The un-reached state is ink, not opacity.** It used to animate
+          `opacity` down to 0.25, and that is a *resting* state — a reader sits
+          with four dim links while they read the first one — so it was
+          composting real copy down to about 2:1. `--on` carries the reveal in
+          `landing.css` as a material change instead: an un-reached link is
+          flush and quiet, a reached one is raised and full-ink. The stagger
+          survives as the `y` offset, so the links still arrive in order.
+          Found by the P14 accessibility pass, same finding as the attendance
+          strip and the inactive avatar.
+        */}
         <ol className="lp-chain">
           {chain.map((link, i) => (
             <motion.li
               key={link.label}
               className={cx("lp-chain__link", reached(i + 1) && "lp-chain__link--on")}
-              initial={reduced ? false : { opacity: 0.25 }}
-              animate={{ opacity: reached(i + 1) ? 1 : 0.25 }}
+              initial={reduced ? false : { y: 10 }}
+              animate={{ y: reached(i + 1) ? 0 : 10 }}
               transition={{ ...spring.chip, delay: still ? 0 : staggerDelay(i) }}
             >
               <p className="t-micro lp-chain__label">{link.label}</p>

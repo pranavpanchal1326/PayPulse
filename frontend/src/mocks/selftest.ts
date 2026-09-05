@@ -18,6 +18,7 @@ import type { HttpHandler } from "msw";
 import { handlers } from "./handlers";
 import { reset } from "./db";
 import { route, setMockLatency } from "./http";
+import { DEMO_PASSWORD } from "./seed/people";
 
 interface Reply {
   status: number;
@@ -68,7 +69,9 @@ async function call(
 
 const signIn = async (email: string): Promise<string> => {
   const reply = await call("POST", "/auth/login", {
-    body: { email, password: "peoplepay" },
+    // The constant, not the literal. A second copy of the password is how the
+    // mock accounts drifted from `backend/app/db/seed.py` in the first place.
+    body: { email, password: DEMO_PASSWORD },
   });
   return (reply.body as { access_token?: string })?.access_token ?? "";
 };
@@ -98,20 +101,20 @@ export async function runMockSelfTest(): Promise<{ passed: number; failed: numbe
 
   reset();
 
-  const admin = await signIn("admin@peoplepay360.com");
-  const manager = await signIn("payroll.manager@peoplepay360.com");
-  const hr = await signIn("hr.manager@peoplepay360.com");
-  const employee = await signIn("employee@peoplepay360.com");
+  const admin = await signIn("admin@paypulse.app");
+  const manager = await signIn("payroll.manager@paypulse.app");
+  const hr = await signIn("hr.manager@paypulse.app");
+  const employee = await signIn("employee@paypulse.app");
 
   /* ── Auth ──────────────────────────────────────────────────────────── */
 
   check(admin.length > 0, "admin cannot sign in");
 
   const wrongPassword = await call("POST", "/auth/login", {
-    body: { email: "admin@peoplepay360.com", password: "nope" },
+    body: { email: "admin@paypulse.app", password: "nope" },
   });
   const unknownUser = await call("POST", "/auth/login", {
-    body: { email: "nobody@peoplepay360.com", password: "nope" },
+    body: { email: "nobody@paypulse.app", password: "nope" },
   });
   check(
     JSON.stringify(wrongPassword.body) === JSON.stringify(unknownUser.body),

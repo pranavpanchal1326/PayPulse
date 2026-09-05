@@ -219,7 +219,7 @@ export const employees: Employee[] = PEOPLE.map((p) => ({
   id: p.id,
   employee_number: `PP-${String(p.id).padStart(4, "0")}`,
   full_name: p.name,
-  email: `${slug(p.name)}@peoplepay360.com`,
+  email: `${slug(p.name)}@paypulse.app`,
   phone: `+91 9${String(80000000 + p.id * 1_234_567).slice(0, 9)}`,
   department_id: p.department_id,
   department_name: departmentNameById.get(p.department_id) ?? null,
@@ -273,14 +273,23 @@ export interface MockUser {
  * `VITE_API_MODE` must not change how you sign in, or the flag stops being a
  * flag and becomes a second product.
  */
-export const DEMO_PASSWORD = "peoplepay";
+/*
+ * `paypulse`, and the accounts below are `*@paypulse.app` — because that is
+ * what `backend/app/db/seed.py::SEED_USERS` actually seeds. They had drifted
+ * to `peoplepay` / `*@paypulse.app`, which made the promise three lines
+ * above this false: switching `VITE_API_MODE` meant nobody could sign in,
+ * which is precisely the "demo where the thing that breaks is the seam"
+ * that `api/mode.ts` exists to prevent. PRD §13 names `*@paypulse.app` and
+ * `paypulse` as the canonical pair. Found by the P15 rename pass.
+ */
+export const DEMO_PASSWORD = "paypulse";
 
 export const users: MockUser[] = [
-  { id: 1, email: "admin@peoplepay360.com",           full_name: "Asha Menon",     role: "ADMIN",              employee_id: 1, is_active: true, password: DEMO_PASSWORD },
-  { id: 2, email: "payroll.manager@peoplepay360.com", full_name: "Ravi Deshmukh",  role: "HR_PAYROLL_MANAGER", employee_id: 2, is_active: true, password: DEMO_PASSWORD },
-  { id: 3, email: "payroll.user@peoplepay360.com",    full_name: "Neha Kulkarni",  role: "HR_PAYROLL_USER",    employee_id: 3, is_active: true, password: DEMO_PASSWORD },
-  { id: 4, email: "hr.manager@peoplepay360.com",      full_name: "Imran Shaikh",   role: "HR_MANAGER",         employee_id: 4, is_active: true, password: DEMO_PASSWORD },
-  { id: 5, email: "employee@peoplepay360.com",        full_name: "Sneha Patil",    role: "EMPLOYEE",           employee_id: 5, is_active: true, password: DEMO_PASSWORD },
+  { id: 1, email: "admin@paypulse.app",           full_name: "Asha Menon",     role: "ADMIN",              employee_id: 1, is_active: true, password: DEMO_PASSWORD },
+  { id: 2, email: "payroll.manager@paypulse.app", full_name: "Ravi Deshmukh",  role: "HR_PAYROLL_MANAGER", employee_id: 2, is_active: true, password: DEMO_PASSWORD },
+  { id: 3, email: "payroll.user@paypulse.app",    full_name: "Neha Kulkarni",  role: "HR_PAYROLL_USER",    employee_id: 3, is_active: true, password: DEMO_PASSWORD },
+  { id: 4, email: "hr.manager@paypulse.app",      full_name: "Imran Shaikh",   role: "HR_MANAGER",         employee_id: 4, is_active: true, password: DEMO_PASSWORD },
+  { id: 5, email: "employee@paypulse.app",        full_name: "Sneha Patil",    role: "EMPLOYEE",           employee_id: 5, is_active: true, password: DEMO_PASSWORD },
 ];
 
 for (const u of users) {

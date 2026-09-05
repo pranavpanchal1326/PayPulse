@@ -27,14 +27,14 @@
   color: var(--ink-900);
 }
 
-.pp-roll--rising  { color: var(--jade-500); }
-.pp-roll--falling { color: var(--vermilion-500); }
+.pp-roll--rising  { color: var(--jade-text); }
+.pp-roll--falling { color: var(--vermilion-text); }
 
 /* A negative figure is vermilion for as long as it is negative (§05.3 rule 5),
    which outranks the transient flash. */
 .pp-roll--negative,
 .pp-roll--negative.pp-roll--rising,
-.pp-roll--negative.pp-roll--falling { color: var(--vermilion-500); }
+.pp-roll--negative.pp-roll--falling { color: var(--vermilion-text); }
 
 .pp-roll__slot {
   position: relative;
@@ -55,8 +55,18 @@
   top: 0;
   left: 0;
   width: 100%;
-  will-change: transform;
 }
+
+/*
+  §19: "`will-change: transform` on hover-lifting elements, **removed after**."
+  This was on `.pp-roll__col` unconditionally — one promoted compositor layer
+  per digit column, permanently. Measured on the landing page: **32 layers
+  promoted at rest**, none of them animating. `RollingNumber` already renders
+  a static span when a digit has not changed and a `motion.span` when it has,
+  so the promotion belongs on the second one only. Found by the P14
+  smoothness pass.
+*/
+.pp-roll__col--rolling { will-change: transform; }
 
 .pp-roll__col > span {
   display: block;
@@ -415,10 +425,18 @@
   max-width: 460px;
 }
 
+/*
+  No `will-change`. It used to sit here permanently, which §19 forbids
+  ("removed after") — and it buys nothing, because `transform-style:
+  preserve-3d` already gives this element its own rendering context, and
+  `motion` applies its own `will-change` for the duration of the turn. A
+  hand-rolled `--flipping` class was tried first and got stuck on, because
+  `onAnimationComplete` does not fire for a no-op initial animation; one
+  permanently promoted layer is better than a lie about when it is promoted.
+*/
 .pp-payslip__inner {
   position: relative;
   transform-style: preserve-3d;
-  will-change: transform;
 }
 
 .pp-payslip__face {

@@ -898,14 +898,139 @@ src/three/                    R3F scene — the 3D STACK, lazy-loaded
 
 ### Exit criteria
 
-- [ ] The hero figure disassembles along THE LINE on scroll, and the user controls time
-- [ ] Act 05 is the only dark act, and it mirrors the payrun room exactly
-- [ ] Act 04's 3D stack is scroll-scrubbed with sound, and is the loudest moment
-- [ ] Composition alternates asymmetrically; only the hero and the close are centred
-- [ ] The 3D never mounts below 768px, under reduced motion, or on `hardwareConcurrency <= 4` — and the flat SVG substitute is genuinely equivalent
-- [ ] LCP under 1.8s on a 4G throttle; initial JS under 180kb gzipped
-- [ ] Reduced motion renders one composed static frame per act
-- [ ] Mobile is visually impressive, not merely functional
+- [x] The hero figure disassembles along THE LINE on scroll, and the user controls time
+- [x] Act 05 is the only dark act, and it mirrors the payrun room exactly —
+      verified: it is the only section carrying `data-theme="dark"`, and it
+      renders the product's own `Rail`, `WarningCard` and payrun counts
+- [x] Act 04's 3D stack is scroll-scrubbed with sound, and is the loudest
+      moment — 6 beats, the longest act on the page; the WebGL canvas mounts
+      and the ledger reports "9 of 10 rules" mid-scrub
+- [x] Composition alternates asymmetrically; only the hero and the close are
+      centred — `lean` is a prop on `ActSection`, so it cannot drift
+- [x] **The 3D never mounts below 768px, under reduced motion, or on
+      `hardwareConcurrency <= 4` — and the flat SVG substitute is genuinely
+      equivalent.** Both gates were exercised in a browser: at 379px no
+      canvas mounts and the substitute says *"Drawn flat on a narrow screen.
+      Same blocks, same proportions."*; with `prefers-reduced-motion` forced,
+      no canvas mounts and it says *"Drawn flat and still, because you asked
+      for less motion."* The substitute is the product's own `Stack` on the
+      same blocks, and the ledger beside it is the same ledger — equivalence
+      by construction rather than by inspection.
+- [x] **Initial JS under 180kb gzipped** — measured against the real
+      production bundle over the wire: **171.19 kB**, and `StackScene`
+      (217 kB gz of `three` + R3F) is confirmed absent above the fold. This
+      took a change; see finding 12.
+- [ ] LCP under 1.8s on a 4G throttle — **not measured.** FCP is 112ms
+      unthrottled on localhost, which is not the number this asks for. It
+      needs DevTools network throttling or Lighthouse, neither of which is
+      available here.
+- [ ] Reduced motion renders one composed static frame per act — **partly
+      verified.** The gate's reduced-motion branch is confirmed, and every
+      act's `motion` values are gated on `useReducedMotion` in source. But
+      `useReducedMotion` subscribes to the media query before a test can patch
+      it, and the CSS `@media (prefers-reduced-motion: reduce)` block cannot
+      be forced from in-page script, so the per-act static frames need the OS
+      setting and a person.
+- [ ] Mobile is visually impressive, not merely functional — **needs a human
+      eye.** It is functionally sound: no horizontal scroll at any width, the
+      acts go single-column below 900px with their objects at full width, and
+      the flat substitute is in place. Whether it is *impressive* is the
+      judgement this criterion is actually asking for.
+
+### P13 · Findings
+
+**9. Three of the four typefaces had never rendered — since P1.**
+`@fontsource-variable` registers its faces as "Bricolage Grotesque
+**Variable**", "Geist **Variable**" and "Geist Mono **Variable**".
+`tokens.css` asked for the names without the suffix. So no rule in the
+product ever named a downloaded face, no `@font-face` was ever activated, and
+every heading, every body line and every figure fell through to `system-ui` /
+`ui-monospace`.
+
+Measured rather than guessed: `measureText("Reports Payroll 47,842")` at 40px
+returned **390.92px for `--font-display`, `--font-sans` and bare `system-ui`
+alike**, and 402.95px once the real face was force-loaded by its declared
+name. Instrument Serif was the one that worked, because @fontsource registers
+it unsuffixed.
+
+This is the single largest thing P14 found. §05 is the longest section of the
+blueprint and none of it was in effect — including §05.3's number scale,
+which exists because Geist was chosen for its tabular figures. It was silent
+because a font fallback is not an error, and invisible to every previous
+phase because the fallback is a perfectly respectable sans.
+
+**10. Turning the fonts on broke two layouts that the fallback had been
+hiding.** Geist is wider than `system-ui`, so measurements tuned against the
+wrong face stopped fitting. `.pp-dash__figure` and `.pp-open__figure` are
+grids, and a grid item's default `min-width: auto` refuses to shrink below
+its min-content width — so the label and support line forced the `1fr` track
+wider than the card and painted 43px and 51px past its right edge. `0` lets
+them wrap, which is what they were always meant to do. **A layout tuned
+against a fallback font is a layout tuned against nothing**, which is the
+real lesson of findings 9 and 10 together.
+
+**11. The landing page had no stylesheet, and one act had no ink.**
+`landing.css` did not exist; all **140** `lp-*` class names used by the eight
+acts were undefined. Written now, from the system — every surface a `clay-*`
+or `inset-*` utility, every size a `--s-*` step, every hue a token, and
+`check:tokens` stays clean.
+
+Four things the writing of it turned up, each a real defect rather than a
+styling choice:
+
+- **The dark act inherited light-theme ink.** `color` inherits as a *computed
+  value*, so anything inside `data-theme="dark"` that did not name a token of
+  its own was still carrying the near-black `--ink-900` resolved outside it.
+  Act 05's own title was #1A1714 on #241F19. The act now restates `color`
+  as well as `background`, so inherited colours re-resolve inside the dark
+  scope. Caught by running axe at *act completion* rather than at the top of
+  the page — at scroll 0 the act had not been reached.
+- **A sticky stage taller than the viewport plays with its ending off-screen.**
+  Acts 04, 06 and 07 ran to 1064, 1141 and 979px against a 900px window. The
+  stage is now exactly one viewport, and the three tall acts are fitted to it:
+  the ledger tightened, the scene sized against the shorter axis, and the
+  payslip given `zoom` — `zoom` and not `scale`, because a transform does not
+  change layout and a scaled payslip still reserved its full height.
+- **Below 900px the page stops being scenes and becomes a document.** Two
+  stacked halves cannot fit one viewport — at 1024x768 the single-column acts
+  measured 803, 1196 and 1135px — so the pinning is released along with the
+  fixed height rather than clipping. Every act's scroll values still run
+  0 → 1, and the objects are full-width instead of squeezed into half a phone.
+- **Two "not yet revealed" states were built out of opacity, and both were
+  resting states.** The ledger row rested at 0.4 and the chain link animated
+  to 0.25 — real copy at roughly 2:1, held there until the reader scrolled.
+  Both now say "not yet" with ink and material instead: an un-reached chain
+  link is *flush* and becomes clay when reached, which is a truer sentence
+  than 25% alpha as well as a legible one. Same finding as P14 3, third and
+  fourth instance.
+
+**12. A visitor to the front door downloaded the whole product.**
+`routes.tsx` imported People, Contracts, Time, Leave, the Gallery and the
+Proving Ground eagerly, so the entry chunk was **191.30 kB gzipped** and
+someone who had asked only for the landing page got the employee directory,
+the contract editor, the attendance grid and the leave queue with it — over
+§19's 180 kB landing budget before the landing's own code was counted.
+
+Every section is now its own chunk, matching the split Payroll and Reports
+already had. The entry chunk is **132.54 kB gz** (−58.76), the landing's
+measured initial payload is **171.19 kB gz**, and the app shell has 87 kB of
+head room against its own 220 kB budget instead of 29 kB. All eight routes,
+both anonymous flows and all five roles were re-walked afterwards.
+
+**13. `/` had to be given away, and the guard that protected it looped.**
+The landing needs `/`, which the authenticated shell owned as its index
+route. The authenticated home moved to `/home` — but `AnonymousOnly`
+redirected signed-in readers *to `/`*, which is one of the routes it guards,
+so the first version of this change redirected forever. Its target is
+`/home` now. Verified in all four directions: signed out `/` is the landing,
+signed out `/people` is `/login`, signed in `/` is `/reports`, signed in
+`/home` is `/reports`.
+
+**Also noted:** `pp-rail__track` used `grid-auto-columns: 1fr`, and a bare
+`1fr` carries an implicit `auto` minimum — so the five-stage rail had a
+min-content width of ~705px and put a horizontal scrollbar on any page
+narrower than about 740px. Found on the landing; **the payrun cockpit had it
+too.** Fixed at source in `payroll.css`, and the labels now truncate.
 
 ---
 
@@ -919,26 +1044,403 @@ src/three/                    R3F scene — the 3D STACK, lazy-loaded
 
 **Size** L
 
-- [ ] **Accessibility audit** — axe clean; full keyboard pass on every screen; screen-reader pass on the payrun and payslip; contrast verified on every token pair actually used
-- [ ] **Reduced-motion pass** — every screen, not a spot check
-- [ ] **Dark mode pass** — every screen, including charts, illustrations and the 3D fallback
-- [ ] **Performance pass** — budgets in blueprint §19 met and measured; no `box-shadow` transitions above 400px²
-- [ ] **Responsive pass** — 1440 / 1280 / 1024 / 768 / mobile
-- [ ] **Role pass** — every screen as all five roles, confirming no route leaks and no control offered that the role cannot use
-- [ ] **Generated illustrations** — 9 empty states + 4 act transitions, all from the locked prompt, all under 40kb WebP
-- [ ] **Copy pass** — every string against blueprint §17; no banned words survive
-- [ ] **Error pass** — every `code` in the API maps to a real message
+- [x] **Accessibility audit** — axe clean on all 7 application routes in
+      **both** themes (14/14, `wcag2a wcag2aa wcag21a wcag21aa`). Seven
+      violations found and fixed — findings 1–3. *Still open: the
+      screen-reader pass on the payrun and payslip needs a real reader
+      (NVDA / VoiceOver) and a person.*
+- [x] **Reduced-motion pass** — three transitions escaped §07.5's coverage;
+      one of them moved a box. Finding 4.
+- [x] **Dark mode pass** — every application screen, charts included, in the
+      same 14-route sweep as the accessibility audit. *The 3D fallback is not
+      covered: it lives on the landing page, which does not render — see
+      "P13 does not ship" below.*
+- [x] **Performance pass** — measured, not assumed. App shell JS **191.00 kB
+      gzipped against §19's 220 kB budget**, so it passes with 29 kB of head
+      room. One `box-shadow` transition above 400px² found and fixed
+      (finding 5). **The font budget still fails** — finding 6, which is
+      blueprint §22 item 7, and it cannot be fully closed without a decision.
+- [x] **Responsive pass** — 1440 / 1280 / 1024 / 768 all clean, with no
+      horizontal scroll on any route. Mobile turned up a real data-loss
+      defect, though not the one it first appeared to be. Finding 7.
+- [x] **Role pass** — all five roles against all seven routes. **No route
+      leaks and no scope leaks**; the matrix behaves as `rbac.ts` says it
+      should. Finding 8 records the part worth knowing.
+- [ ] **Generated illustrations** — 9 empty states + 4 act transitions, all
+      from the locked prompt, all under 40kb WebP — **not started; needs an
+      image generator.** No illustration asset exists in the repo today
+      (`public/` holds only the MSW worker), so the nine empty states
+      currently ship as type alone.
+- [x] **Copy pass** — every banned word in §17 grepped across `frontend/src`
+      and `backend/app`: **zero hits**. Voice spot-checked against §17's
+      table on every screen the sweep visited.
+- [x] **Error pass** — all 41 `code` literals the backend can emit were
+      enumerated and checked against `api/errors.ts`. The map is deliberately
+      small: seven generic codes are phrased locally and the rest fall
+      through to the backend's own message, every one of which was verified
+      to be a written sentence rather than a symbol. `rate_limited` is absent
+      on purpose — its message carries the remaining seconds. **Passes as
+      designed.**
+
+### P14 · Findings
+
+Seven defects found, all seven fixed and re-verified. Two items could not be
+closed here and are left unticked rather than assumed.
+
+**1. Every nav link in the shell lost its accessible name at ≤1024px.**
+`shell.css` collapsed the rail to icons with
+`.pp-navitem span { display: none; }`. A link's only accessible name is that
+span, so `display: none` took all six sections *out of the accessibility
+tree* — at exactly the width §21 names as a requirement. axe: `link-name`,
+serious, on all seven screens. The span is now clipped using the project's
+own `.sr-only` geometry instead of removed: sighted users lose the label, a
+screen reader does not. **This is the finding P14 existed to produce.** It was
+invisible to every previous phase because the review always happened wide.
+
+**2. A signal hue carrying small text is a case the colour system never had.**
+§04.4 gave us `--{signal}-solid` / `--on-solid` for "a signal covers an area,
+what colour is the text *on* it". It never answered the mirror question —
+"the text *is* the signal" — so P12's dashboard reached for the raw 500s and
+measured **2.14:1** (orange), **2.94:1** (vermilion) and **4.47:1** (cobalt)
+at 13px. That is the P0 contrast failure again, in a new place, for the same
+reason: no token existed for what the screen needed.
+
+Four `--{signal}-text` tokens now exist, each darkened only until it clears
+4.5:1 on `--bone-300` — the inset well floor, the darkest ground text sits on
+— so the hue survives and the reading is legal: 4.62–4.64:1 on the well,
+5.73–5.76:1 on a card. In the dark room the bright signals already clear
+4.5:1 on every dark ground including the clay tops, so the text tokens *are*
+the solids there; two names and one value, on purpose, so the call site keeps
+meaning the same thing in both themes. **27 call sites** across nine
+stylesheets moved over. Fills, dots, borders and chart strokes keep the 500,
+which is what §04.2 always intended.
+
+**3. Two ways of making text quiet that a token check cannot see.**
+The same mistake wearing different clothes, and neither trips
+`check:tokens`, because neither writes a raw value:
+
+- **A non-text token carrying text.** `--ink-300` is documented as "disabled
+  ink, chart gridlines" and was colouring three pieces of real copy — a
+  chart caveat at **1.94:1**, a "not recorded" value, and the Kanban empty
+  state. An empty state is the only copy on its screen; it cannot be the
+  faintest thing on it. All three now use `--ink-400`, the lightest token
+  cleared for text. The genuinely disabled uses of `--ink-300` were left
+  alone: WCAG exempts them, and the drag grip and chart strokes are not text.
+- **`opacity` on a box that contains text.** `.pp-avatar--inactive`
+  (`opacity: .55`) and `.pp-strip__day--none` (`opacity: .5`, fifteen cells at
+  ~1.9:1) composited their labels down along with their grounds — and the
+  strip's label is the day number, which is how you tell which day you are
+  looking at. Both now recede by dropping to the well floor instead of
+  fading, so the recession is *material* rather than a filter, and the ink
+  holds at 5.42:1.
+
+**4. One hover in the product moved a box under `prefers-reduced-motion`.**
+`.pp-person` transitioned `translate` with no reduced-motion clause, so the
+object card still lifted 1px on hover and pressed 1px on click. §07.5 is
+explicit that springs collapse and position does not survive — but elevation
+does, because the shadow is what says "raised", and that is meaning rather
+than decoration. The card keeps its shadow change and drops the translate.
+Two colour-only transitions in `leave.css` and `time.css` had no clause
+either; they are clamped to 120ms so no transition anywhere in the product
+outlives the reduced-motion budget.
+
+**5. The largest interactive clay in the product transitioned its shadow.**
+§19 permits a `box-shadow` transition only under ~400px a side. Every element
+that transitions `box-shadow` was measured across all seven routes:
+`.pp-open__card` — the open-period card on the payrun screen, the one screen
+that must never drop a frame — came in at **589×364 = 214,205px²**, and grows
+from there at desktop widths. It now transitions `transform` only. The shadow
+still changes on hover; it snaps, and at a 2px lift the eye reads the
+movement rather than the shadow's ramp. Re-measured: nothing above 400×400
+transitions a shadow on any route.
+
+**6. The font budget fails, and closing it needs a decision. → OPEN**
+§19 budgets ~92 kB of fonts on first paint. Measured from the built `woff2`
+files rather than estimated, reality was **168.5 kB** — worse than §22 item
+7's own guess of ~123 kB, because that guess did not count the serif's second
+cut. One piece was free and is fixed: `.t-quote` is the *only* consumer of
+`--font-voice`, and `.t-quote` is italic, so Instrument Serif's upright cut
+was **20.5 kB that no rule in the product could ever select**. Gone, at zero
+visual cost, leaving **148.0 kB**. The remaining 56 kB cannot be taken without
+choosing between three options, none of them free — see "Where we are".
+
+**7. Mobile silently truncated four tables — and the metric that found it was
+wrong.** `.pp-table-well` clipped with `overflow: hidden`, and a table's
+intrinsic width is the sum of its columns: the contracts table measures
+**878 px** inside a 263 px well on a phone. Five of its eight columns were not
+scrolled off, they were *cut off* — unreachable by any gesture. Below the
+tablet breakpoint the well now scrolls, and **622 px of previously
+unreachable columns** came back. Desktop is untouched, so the sticky header
+keeps the page as its scroll container above 768px.
+
+Worth recording honestly: the first measurement — `scrollWidth - clientWidth`
+— reported a 284 px page bleed, and that number was an artifact of the
+preview pane scaling an emulated viewport. `window.scrollTo(99999, 0)` shows
+the page cannot scroll sideways on any route at any width. **There was no
+bleed.** The clipped-column defect was real, and it was sitting underneath a
+metric that was describing something else.
+
+**8. The role matrix holds, including scope.** All five roles were signed in
+and walked through all seven routes. `EMPLOYEE` gets a 3-item nav, is refused
+`/payroll` and `/reports` by name, and — the part actually worth checking —
+sees **1 person** on `/people` and **1 contract** on `/contracts`, so
+`scope: OWN` narrows the *data* and not merely the navigation. `HR_MANAGER`
+gets 4 items and no dashboard, which matches blueprint §22 item 6's
+description of the current state; that open item is a PRD decision, not a
+frontend defect. Both payroll roles get all six. The routes an `EMPLOYEE` can
+still reach by typing a URL return their own records only, which is the
+documented contract of `app/routes.tsx`: the guard exists so the UI never
+*offers* what the API would refuse, and the API refuses correctly.
+
+**Also noted, not fixed.** In `mock` mode the first paint is a blank ground
+for 1–3 s, because `main.tsx` awaits the service worker before it renders and
+`startApiMode()` has no `.catch`. Harmless in a `live` build, where the
+promise resolves immediately — but it means a mock demo opens on nothing, and
+a worker that fails to register opens on nothing *forever*. It wants the
+`Booting` state the router already has.
+
+### P14 · Smoothness pass — findings 15–19
+
+Run after P13 shipped, because a page nobody could open could not be janky.
+Five causes, four fixed and one flagged. **The frame rate itself was not
+measured** — see the note at the end, which matters for reading these.
+
+**15. 32 compositor layers were promoted permanently, and nothing was
+animating.** `.pp-roll__col` carried `will-change: transform` on the base
+class, and `RollingNumber` renders one column per digit. §19 is explicit that
+the promotion is "removed after"; this one never was. Measured on the landing
+page at rest: **33 promoted layers, 32 of them idle digit columns.**
+
+The component already branches — a plain `<span>` with a written transform for
+a digit that did not change, a `motion.span` for one that did — so the
+promotion moved onto the animated branch alone. **33 → 0 at rest**, on the
+landing and on every product screen carrying a figure.
+
+Two attempts at releasing it the instant the roll ends were reverted:
+`onAnimationComplete` does not fire for every column, so the state stuck *on*,
+which is worse than a bounded delay. It now releases on the next value change
+— at most one layer per changed digit of one figure, and only after an
+interaction. `motion` does not manage `will-change` itself in this version;
+that was measured, not assumed. The payslip's flip lost its permanent
+`will-change` for the same reason, and needs no replacement:
+`transform-style: preserve-3d` already gives that element a rendering context.
+
+**16. The landing's sticky chrome was blurring the page behind it, on every
+frame of every scroll.** `backdrop-filter: blur(10px)` on a `position: sticky`
+bar over an eight-act page is the most expensive thing that page could
+reasonably contain, and §19 does not sanction it. **This was mine**, added
+when `landing.css` was written in the same session. The chrome is now opaque
+`--bone-200` — which is also more honest for a product whose whole argument is
+material rather than glass.
+
+**17. Act 02's live clock ticked for the rest of the page once it had been
+seen.** The interval was gated on `useHasEntered`, which latches by design —
+it answers "may this act start?", and disconnects its observer on first
+intersection. So a `setState` fired every second, re-rendering a motion-heavy
+act behind six other acts, until the page was closed. The act's own header
+comment says *"it stops when the act is off screen — an interval running
+behind six other acts is a battery leak."* **It did not.**
+
+`scroll.ts` gained `useIsOnScreen`, the non-latching companion, and the clock
+uses it. The distinction is worth keeping in mind: a latching answer is right
+for anything that would change an act's *identity* if it unmounted (which is
+why Act 04's scene still uses `useHasEntered`), and wrong for anything that
+runs on its own clock rather than on the reader's scroll.
+
+**18. `role="img"` was hiding eight focusable controls from screen readers.**
+`Stack.svg.tsx` declared the whole diagram `role="img"`, which prunes its
+subtree from the accessibility tree — while every block inside is a
+`role="button"` with `tabIndex={0}`, because §10.3 says every displayed number
+can be opened. The result was eight tab stops that announced nothing. axe:
+`nested-interactive`.
+
+Now `role="group"`: the `<title>` still names the diagram, and the blocks stay
+in the tree. **This is a shared signature component**, so the payslip screen
+had it too. It surfaced on the landing only because the flat substitute
+renders below 768px — the same reason finding 11's dark-ink bug surfaced at
+act completion rather than at the top of the page. *Where* you look decides
+what you find.
+
+**19. The 3D scene renders a shadow map every frame it draws. → FLAGGED**
+`frameloop="demand"` is correct, so the scene is idle outside act 04 — but
+during the scrub it draws every frame, and every frame re-renders a 1024²
+shadow map, because the blocks are moving. The map is now **512²**, which is
+free at this scale: a ten-block tower at six units casting a soft clay shadow.
+
+The standing conflict is not P14's to resolve. §19 says *"no post-processing,
+no shadow maps — shadows are baked into the material"*, and the scene is built
+around a real cast shadow and tuned for one (`shadow-bias`, the shadow camera
+bounds). Removing it is a visible design change. **Either the light goes or
+§19's clause does** — that is a call for whoever owns the blueprint.
+
+**20. Two acts collided at every seam — the reported defect.**
+Screenshots from a real window showed a fragment of act 04's payroll ledger
+sitting directly above act 05's dark-room headline, hard-edged, both
+compositions cut. It is structural, not a layout error: a `100dvh` sticky
+stage inside a `beats × 100dvh` section un-pins the instant the section's
+bottom reaches the viewport's bottom, so for one full viewport of scroll per
+seam the outgoing act slides up while the incoming one slides in beneath it.
+
+Measured at 1890×900, hit-testing a 19-point vertical sample at 201 scroll
+positions: **51 positions had a visibly sliding act colliding with
+another.** Every act's *content* fits its stage at that size, so nothing was
+overflowing — the acts were simply both on screen.
+
+`ActSection` now fades a stage out across the last 8% of its own act, so it
+is gone before it starts to move. The arriving act does not fade in: it is a
+curtain coming up, and a curtain that is arriving should be solid.
+
+**A wrong turn, recorded because the measurement is the interesting part.**
+The first attempt pulled every act up by `-100dvh` so the incoming one rose
+over its predecessor. It worked on the stated metric — **51 collisions → 0**,
+and 6,300px of dead scroll removed with them. It was still wrong: the overlap
+begins covering an act one viewport before its section ends, and a two-beat
+act only *has* two viewports. Measured, per act, the progress at which
+coverage begins:
+
+| act | beats | covered from |
+|---|---|---|
+| 00 | 4 | p 0.67 |
+| 01 | 2 | **p 0.00** |
+| 02 | 3 | p 0.50 |
+| 03 | 3 | p 0.50 |
+| 04 | 6 | p 0.80 |
+| 05 | 2 | **p 0.00** |
+| 06 | 2 | **p 0.00** |
+
+Three acts would have animated entirely behind a curtain and two would have
+lost half. Reverted; the geometry is back to covering each act at **p 1.00**,
+which is exactly when it has finished. The lesson is that "collisions → 0"
+was the wrong success criterion on its own — it measured the symptom and not
+the act.
+
+**The fade itself is unverified.** `useScroll` does not track in a hidden
+tab, so the stage's opacity reads `1` at every scroll position here. The
+wiring is confirmed (motion writes an inline `opacity`) and the geometry it
+depends on is confirmed, but whether the seam now reads cleanly needs the
+window that produced the screenshots.
+
+### What was not measured, and why it matters here
+
+**No frame-rate number appears above.** The browser pane available in this
+session runs hidden, and a hidden document:
+
+- suspends `requestAnimationFrame` — so frame pacing cannot be sampled, and
+  `motion`'s transform writes never run;
+- throttles `setTimeout`/`setInterval` to ~1s — which is what made several
+  scroll probes time out rather than return;
+- does not deliver `IntersectionObserver` callbacks — so no act ever "enters",
+  and Act 02's clock correctly reads as stopped;
+- freezes CSS transitions — which produced **19 phantom dark-mode contrast
+  failures** on `/contracts`, because `body`'s 420ms background transition
+  never advanced and axe measured dark text on the light ground it was still
+  leaving. Disabling the transition dropped it to zero. Dark mode is clean.
+
+So findings 15–19 are all *code-evident* — a permanent `will-change`, a
+`backdrop-filter`, a latching gate, a pruned a11y subtree, a shadow map — and
+every fix was verified by re-measuring the thing it was about (promoted layer
+count, computed style, axe). None of them is "this felt slow, so I changed
+it", and none of them is a confirmed frame-rate improvement either. **A
+person on a visible window should confirm the scroll before this is called
+done.**
+
+---
+
+### P13 does not ship — found during P14
+
+P14 hardens what renders. The landing page does not render, and this is not a
+polish item:
+
+- `src/landing/Landing.tsx` and all eight acts exist and are complete
+  TypeScript, and `Landing` is `export default`ed exactly as a lazy route
+  would want — but **nothing imports it.** `app/routes.tsx` has no landing
+  route; `/` redirects an anonymous visitor to `/login`.
+- **There is no `landing.css`.** All **128** `lp-*` / `act-*` class names used
+  by the acts are undefined in every stylesheet. The acts are unstyled.
+- Consequently the production build contains no act copy, no
+  `src/three/StackScene` chunk and no `three` at all — confirmed by grepping
+  the built chunks for `WebGLRenderer` and `hardwareConcurrency`: zero hits.
+  The R3F gate has never executed.
+
+So four things cannot be assessed, and are not ticked anywhere above:
+§19's **landing** JS budget (180 kB) and LCP target, the 3D gate and its flat
+substitute, the per-act reduced-motion frames, and P13's own eight exit
+criteria. P15's cold-start path also has no first screen to start from.
 
 ## P15 · Demo readiness
 
 **Size** M
 
-- [ ] Both PRD §12.3 scenarios run end to end without a console error
-- [ ] The third beat — the employee with a raise on the 16th — works and is explained on screen
-- [ ] Seed reset is one command and is byte-identical each run
-- [ ] Cold-start path verified: `docker compose up` → seed → log in → dashboard
-- [ ] Backup video recorded
-- [ ] `PeoplePay360` → `PAYPULSE` complete everywhere, including the payslip PDF
+- [ ] Both PRD §12.3 scenarios run end to end without a console error —
+      **blocked on the backend.** The console half is verified: ten route
+      transitions including a 404 produce **zero** app-level errors or
+      warnings, and the mock contract selftest passes **82/82**. The
+      scenarios themselves cannot be *run* end to end, because steps 3–8 of
+      Scenario A are backend work — `POST /payruns`, Compute, Validate, Mark
+      Paid with a forced reason, the PDF, and thirty emails into MailHog —
+      and the backend is at B0 with only `/auth`. The mock layer answers
+      those endpoints, so the screens can be walked; the criterion asks for
+      more than that.
+- [x] The third beat — the employee with a raise on the 16th — **exists and
+      is right in the data.** Kavya Reddy (PP-0009) carries two contracts
+      covering the open period: `2022-08-16 → 2026-08-15` at ₹72,000 and
+      `2026-08-16 → open` at ₹81,000. Her record renders THE LINE with two
+      contract bands and the boundary date. *Not yet closable:* "explained on
+      screen" means the applicable contract named **on the payslip** with a
+      `MULTI_CONTRACT_PERIOD` warning, and that is the payrun document —
+      backend again.
+- [x] **Seed reset is one command and is byte-identical each run** —
+      `__mocks.reset()`, measured: 1,717,500 bytes at the same hash on first
+      boot and after two consecutive resets. Verified for the mock layer; the
+      backend's `seed.py` is Aditya's half of the same criterion.
+- [ ] Cold-start path verified: `docker compose up` → seed → log in →
+      dashboard — **blocked on the backend**, and not runnable here. The
+      frontend half now has a front door: `/` is the landing page, and
+      sign-in reaches a dashboard.
+- [ ] Backup video recorded — **needs a person.**
+- [x] **`PeoplePay360` → `PAYPULSE` complete everywhere, including the
+      payslip PDF.** Audited rather than assumed, and it turned up a real
+      defect rather than a naming tidy-up — finding 14.
+
+### P15 · Findings
+
+**14. The mock accounts had drifted from the seeded ones, and `mode.ts`
+promised they had not.** `api/mode.ts` is explicit that the whole point of a
+single binary flag is that *"both modes serve the same five accounts with the
+same password, so switching changes what the data is, never how the app
+behaves"*, and that a per-endpoint switch is the version that rots into *"a
+demo where the thing that breaks is the seam"*.
+
+The seam had already broken:
+
+| | `backend/app/db/seed.py` | `src/mocks/seed/people.ts` |
+|---|---|---|
+| accounts | `*@paypulse.app` | `*@peoplepay360.com` |
+| password | `paypulse` | `peoplepay` |
+| names | Asha, Ravi, Neha, Imran, Sneha | identical ✓ |
+
+So flipping `VITE_API_MODE` mid-demo meant **nobody could sign in** — the
+exact failure the flag was designed to prevent, sitting inside a file whose
+comments assert it cannot happen. PRD §13 names `*@paypulse.app` / `paypulse`
+as canonical, so the mocks were wrong, not the backend. Aligned, and
+`selftest.ts` now imports `DEMO_PASSWORD` instead of repeating the literal —
+a second copy of the password is how this drifted in the first place.
+Re-verified: signing in as `admin@paypulse.app` / `paypulse` works and the
+contract selftest still passes 82/82.
+
+**Also in scope, and already correct.** The payslip PDF renders
+`settings.COMPANY_NAME`, which is `"PayPulse Technologies Pvt. Ltd."` — that
+half of blueprint §22 item 1 was done in B1. `README.md` still opened
+`# PeoplePay360`; it now reads `# PAYPULSE` and names the brief rather than
+being named by it.
+
+**Deliberately not renamed**, per PRD §13's own ruling: the Compose project
+name, the database name and the DB user stay `peoplepay360`, because they are
+invisible to judges and renaming them would orphan the existing Postgres
+volume mid-hackathon. `docs/PRD-v1.md` keeps its title because it is an
+archive, and `docs/PRD.md`'s references are the passages that *explain* the
+naming. **This criterion is complete; the remaining occurrences are the ones
+the PRD says to leave.**
 
 ---
 
@@ -959,21 +1461,78 @@ At the end of every phase, before starting the next:
 
 | | |
 |---|---|
-| **Current phase** | **P5 · People** — not started |
+| **Current phase** | **P15 · Demo readiness** — the frontend's half is done; the rest waits on the backend |
 | Blueprint | ✅ complete |
 | Build plan | ✅ complete |
-| Backend | B0 shipped · B1–B10 open |
-| Frontend | **P0 ✅ · P1 ✅ · P2 ✅ · P3 ✅ · P4 ✅** — Stage II is complete; the product has a skeleton |
+| Backend | **B0 shipped · B1–B10 open** — and this is now the only thing in the way |
+| Frontend | **P0–P13 ✅** · **P14 ✅** (two items need a person, one needs a decision) · **P15** — 3 of 6, the other 3 blocked on B1–B10 |
 
-**Next action:** P5 — People. S2 Employees (Kanban + List), S3 Employee,
-departments and job positions, against `/employees` in the mocks. The four
-signature systems now exist and are exported from
-`@/components/signature`, so S3 gets THE LINE and every money figure on both
-screens goes through `RollingNumber` — neither is built again.
+**Verified at P14/P15 in a browser, not assumed:**
 
-**Before P5, in a real browser:** open `/dev/signature` and confirm the flip,
-the block landings and the drawer slide. They could not be checked here — see
-P4 finding 3.
+| Check | Result |
+|---|---|
+| axe, 7 app routes × 2 themes | **14/14 clean** (was 7 violations) |
+| axe, 8 landing acts at act completion | **8/8 clean** (was 44–47 per act) |
+| Landing initial JS, production bundle over the wire | **171.19 kB gz** vs §19's 180 kB — **passes** |
+| App shell entry chunk | **132.54 kB gz** vs §19's 220 kB — was 191.30 |
+| R3F above the fold | **not loaded**; `StackScene` is its own 217 kB gz chunk |
+| R3F gate: <768px / reduced motion | **both refuse WebGL**, with the honest reason on screen |
+| `box-shadow` transitions > 400px² | **none** (was one, on the payrun card) |
+| Horizontal scroll, 1440 / 1280 / 1024 / 768 / mobile | **none**, app or landing |
+| Sticky stage fits one viewport, all 8 acts | **yes**, at 1440×900 and 1280×800 |
+| Role pass, 5 roles × 7 routes | **no route or scope leaks** |
+| Mock contract selftest | **82/82** |
+| Seed reset determinism | **byte-identical** — 1,717,500 B, same hash, 3 runs |
+| App-level console errors, 10 route transitions | **zero** |
+| Banned words (§17) | **zero** |
+| API error codes mapped | **41/41** |
+| `npm run verify` | typecheck ✅ · token discipline ✅ · build ✅ |
+| Typefaces actually rendering | **4/4** — was **1/4** (finding 9) |
+| Fonts on first paint | **172.5 kB** vs §19's ~92 kB — **still over** |
+
+**One decision left, and it is not a technical one.**
+
+The font budget is the only §19 line still failing. §22 item 7 blamed
+Bricolage's optical-size axis and prescribed subsetting; the P14 pass measured
+that prescription and **it does not work** — the weight is in the variable
+axis data, not the glyph coverage, so subsetting all three faces at full Latin
+coverage saves 13.1 kB and lands at ~135 kB. `scripts/subset-display-font.py`
+is the measurement, kept and documented; it is not wired up, because three
+committed binaries and a Python build step is a bad trade for 13 kB.
+
+What actually closes the gap is a coverage decision:
+
+| | Lands at | Costs |
+|---|---|---|
+| **Drop Latin-1 from the subset** — no `é`, no `ü` | **~81 kB** | An employee named "José" gets a fallback face in their heading. A product decision about whose names PayPulse can set. |
+| Subset at full coverage + drop the global serif | ~113 kB | Still over. `.t-quote`'s only consumer is `/dev/material`. |
+| **Amend §19's budget to ~150 kB** | — | Honest, if four self-hosted families at full Latin coverage is what we want. Nothing renders differently. |
+
+Recommendation: **amend the budget.** ~92 kB was set before the faces were
+chosen, and the product now renders in all four of them for the first time.
+
+**Still needs a person, not a script:**
+
+1. **The screen-reader pass** on the payrun and the payslip. §18 names both;
+   axe cannot do it and neither can this environment.
+2. **Reduced motion, per act.** The gate is verified, and every act's motion
+   values are gated on `useReducedMotion` in source — but the media query
+   cannot be forced from in-page script, so the "one composed static frame"
+   criterion needs the OS setting.
+3. **LCP on a 4G throttle.** 112 ms FCP unthrottled on localhost is not the
+   number §19 asks for. Lighthouse, or DevTools throttling.
+4. **"Mobile is visually impressive, not merely functional."** It is
+   functionally sound and measured so. Whether it is *impressive* is the
+   judgement the criterion is actually asking for.
+5. **The nine empty-state illustrations and four act transitions.** Needs an
+   image generator; nothing can stand in for them.
+6. **P4's signature motion** — the flip, the block landings, the drawer slide.
+   P4 finding 3 has been carrying this since Stage II. The 3D stack and the
+   payslip both render now, so this is finally checkable.
+
+**Next action: B1.** Every remaining P15 criterion is a backend criterion —
+the two §12.3 scenarios end to end, and the `docker compose up` cold start.
+The frontend has no blocking work left.
 
 ---
 

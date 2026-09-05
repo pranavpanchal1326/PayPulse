@@ -23,16 +23,25 @@
  * same ramp declared in `tokens.css` — not a bespoke dark palette for a
  * marketing page. A second dark would be a second product.
  *
+ * **The counts move with the rail, not after it.** Pressing `Fix` changes four
+ * figures at once — ready climbs, warnings and blockers fall to zero — and if
+ * they simply swapped, the loudest moment on the page would be a rail sweeping
+ * beside four numbers that had already finished. They roll on the product's own
+ * `RollingCount`, and each one is held back by the same 150ms-per-stage cadence
+ * the sweep uses, so the figures resolve left to right *with* the rail rather
+ * than in front of it. One event, one tempo.
+ *
  * The act is deliberately *not* scroll-scrubbed. Every other act plays as you
  * pass through it; this one waits, because the point being made is that the
  * system stops and will not proceed until a person does something. A blocker
  * that clears itself when you scroll past it would be arguing the opposite.
  */
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Check } from "lucide-react";
 import { formatMoney } from "@/api/money";
 import { Button, WarningCard } from "@/components/system";
+import { RollingCount } from "@/components/signature";
 import { Rail, railStateFor } from "@/features/payroll/Rail";
 import { spring } from "@/motion/springs";
 import { ActHead, ActSection } from "../Act";
@@ -44,6 +53,22 @@ export function Act05Validation() {
   const entered = useHasEntered(ref, "-20%");
   const reduced = useReducedMotion();
   const [resolved, setResolved] = useState(false);
+
+  /**
+   * The figures lag the state by the rail's own stage cadence — 150ms each,
+   * left to right — so "ready", "warnings" and "blocked" land in the order the
+   * sweep passes over them. Under reduced motion the delays collapse to zero
+   * and everything changes on the same frame, which is what a still frame is.
+   */
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    if (reduced) {
+      setShown(resolved);
+      return;
+    }
+    const id = setTimeout(() => setShown(resolved), resolved ? 150 : 0);
+    return () => clearTimeout(id);
+  }, [resolved, reduced]);
 
   /** Open blocking errors → the rail's own reading of the same run. */
   const openErrors = resolved ? 0 : payrun.blocked;
@@ -75,14 +100,24 @@ export function Act05Validation() {
           <p className="t-micro lp-dark__run">
             {payrun.name} · {payrun.label}
           </p>
-          <p className="t-ui lp-dark__counts n-table">
-            <span>{payrun.payslips} payslips</span>
-            <span className="lp-dark__ready">{resolved ? payrun.payslips : payrun.ready} ready</span>
-            <span className="lp-dark__warn">
-              {String(resolved ? 0 : payrun.warnings).padStart(2, "0")} warnings
+          <p className="t-ui lp-dark__counts">
+            <span className="lp-dark__count">
+              <RollingCount value={payrun.payslips} scale="m" label="payslips" /> payslips
             </span>
-            <span className="lp-dark__stop">
-              {String(openErrors).padStart(2, "0")} blocked
+            <span className="lp-dark__count lp-dark__ready" style={{ ["--beat" as string]: "0ms" }}>
+              <RollingCount
+                value={shown ? payrun.payslips : payrun.ready}
+                scale="m"
+                label="ready"
+              />{" "}
+              ready
+            </span>
+            <span className="lp-dark__count lp-dark__warn" style={{ ["--beat" as string]: "150ms" }}>
+              <RollingCount value={shown ? 0 : payrun.warnings} scale="m" label="warnings" />{" "}
+              warnings
+            </span>
+            <span className="lp-dark__count lp-dark__stop" style={{ ["--beat" as string]: "300ms" }}>
+              <RollingCount value={shown ? 0 : payrun.blocked} scale="m" label="blocked" /> blocked
             </span>
           </p>
           <p className="t-ui-sm lp-dark__total">

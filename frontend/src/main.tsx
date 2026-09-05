@@ -17,7 +17,7 @@ import "./styles/index.css";
  * In `live` mode `startApiMode()` resolves immediately and imports nothing.
  */
 startApiMode().then(() => {
-  ReactDOM.createRoot(document.getElementById("root")!).render(
+  ReactDOM.createRoot(document.getElementById("pranav")!).render(
     <React.StrictMode>
       {/* One place makes every spring honour prefers-reduced-motion (§07.5). */}
       <MotionConfig reducedMotion="user">

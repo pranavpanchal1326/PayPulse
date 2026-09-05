@@ -22,7 +22,7 @@
 
 /* A duration that differs from the calendar span is the screen's teaching
    moment (§3.6) — orange marks it as *adjusted*, not as wrong. */
-.pp-lv__days--adjusted { color: var(--orange-500); }
+.pp-lv__days--adjusted { color: var(--orange-text); }
 .pp-lv__days--adjusted .t-micro { color: var(--ink-400); }
 
 .pp-lv__headline {
@@ -113,7 +113,7 @@
   color: var(--ink-400);
 }
 
-.pp-bal__figure--low { color: var(--orange-500); }
+.pp-bal__figure--low { color: var(--orange-text); }
 
 .pp-bal__none {
   margin: 0;
@@ -211,3 +211,11 @@
 .pp-check input { accent-color: var(--cobalt-500); width: 16px; height: 16px; margin-top: 2px; }
 .pp-check > span { display: grid; gap: var(--s-1); }
 .pp-check .t-ui-sm { color: var(--ink-500); }
+
+/* §07.5 — a checkbox row ground carries the only transition in this sheet. It is colour and
+   elevation rather than movement, so it keeps its meaning; it is clamped to
+   the 120ms the blueprint allows so no transition in the product outlives
+   the reduced-motion budget. P14. */
+@media (prefers-reduced-motion: reduce) {
+  .pp-check { transition-duration: 120ms !important; }
+}

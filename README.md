@@ -1,6 +1,7 @@
-# PeoplePay360
+# PAYPULSE
 
-Integrated HR & Payroll platform — Odoo Hackathon.
+Integrated HR & Payroll platform — built for the Odoo Hackathon brief
+"PeoplePay360 HR & Payroll".
 
 Full system design and build plan: **[docs/PRD.md](docs/PRD.md)**
 

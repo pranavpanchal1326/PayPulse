@@ -27,7 +27,7 @@ import { RollingNumber } from "@/components/signature";
 import { spring } from "@/motion/springs";
 import { useSound } from "@/sound/useSound";
 import { ActHead, ActSection } from "../Act";
-import { useActProgress, useHasEntered, useOnStep, useSmoothProgress, useStep } from "../scroll";
+import { useActProgress, useIsOnScreen, useOnStep, useSmoothProgress, useStep } from "../scroll";
 import { day, overtimeBlock } from "../story";
 
 /** The travelling packet crosses on this beat; the block lands on the next. */
@@ -38,7 +38,12 @@ export function Act02Time() {
   const ref = useRef<HTMLElement>(null);
   const raw = useActProgress(ref);
   const progress = useSmoothProgress(raw);
-  const entered = useHasEntered(ref, "-5%");
+  /*
+    "Is anyone looking?", not "has this been seen?" — the live clock is this
+    act's only repeating cost, so the latching `useHasEntered` was simply the
+    wrong question. Nothing else in this act needed it.
+  */
+  const onScreen = useIsOnScreen(ref);
   const reduced = useReducedMotion();
   const play = useSound();
   const still = Boolean(reduced);
@@ -47,11 +52,18 @@ export function Act02Time() {
 
   const [now, setNow] = useState(() => new Date());
 
+  /*
+    Gated on `onScreen`, not `entered`. `useHasEntered` latches by design, so
+    this interval used to survive the whole rest of the page — a `setState`
+    every second, re-rendering an act nobody was looking at, behind six other
+    acts. That is what the header comment above already promised did not
+    happen. It does not happen now.
+  */
   useEffect(() => {
-    if (still || !entered) return;
+    if (still || !onScreen) return;
     const timer = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(timer);
-  }, [still, entered]);
+  }, [still, onScreen]);
 
   /* ── The travel, and the landing ──────────────────────────────────── */
 

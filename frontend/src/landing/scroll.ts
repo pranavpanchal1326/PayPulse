@@ -126,6 +126,40 @@ export function useHasEntered(ref: React.RefObject<Element>, margin = "-15%"): b
 }
 
 /**
+ * Whether the act is on screen **right now** — the non-latching companion to
+ * `useHasEntered`.
+ *
+ * The two are not interchangeable, and the difference matters. `useHasEntered`
+ * answers "may this act start?" and deliberately latches, because an act that
+ * un-mounted its scene when scrolled past would change identity underneath
+ * the reader. This answers "is anyone looking?", which is the question a
+ * *repeating* cost has to ask: an interval, a timer, anything that runs on its
+ * own clock rather than on the reader's scroll.
+ *
+ * `Act02Time`'s live clock was gated on `useHasEntered` and so ticked, with a
+ * `setState` per second, for the entire rest of the page once it had been
+ * seen — the exact "battery leak" its own comment says it avoids. Found by the
+ * P14 smoothness pass.
+ */
+export function useIsOnScreen(ref: React.RefObject<Element>, margin = "0%"): boolean {
+  const [onScreen, setOnScreen] = useState(false);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setOnScreen(entry.isIntersecting),
+      { rootMargin: `${margin} 0px ${margin} 0px` },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [ref, margin]);
+
+  return onScreen;
+}
+
+/**
  * Fires a callback the first time a step is reached, and never again while the
  * reader is inside that step.
  *

@@ -1,0 +1,1516 @@
+/* ============================================================================
+   P13 · THE LANDING PAGE · blueprint §13
+
+   Eight acts, built FROM the design system. Nothing here invents material,
+   type or colour: every surface is a `clay-*` or `inset-*` utility, every
+   size a `--s-*` step, every hue a token. If a rule in this file needed a
+   value the system does not have, that is a finding about the system — which
+   is the whole reason §20.4 puts this phase last.
+
+   THE SHAPE OF AN ACT
+   Each act is a tall `<section class="lp-act">` whose height is its
+   *duration* — `--act-beats` viewport heights — containing one
+   `position: sticky` stage that is what you actually see. Scrolling the
+   section plays the act; scrolling back plays it backwards. That mechanism
+   lives in `landing/scroll.ts`; this file only gives it somewhere to happen.
+
+   COMPOSITION
+   §13: "Composition alternates asymmetrically; only the hero and the close
+   are centred." The stage carries a lean, and the two-column acts alternate
+   which side the object sits on. That is enforced by `Act.tsx` passing a
+   prop, not by remembering to write the right class here.
+   ========================================================================= */
+
+.lp {
+  --lp-measure: 62ch;      /* prose never runs wider than this */
+  --lp-gutter: var(--s-7);
+  /*
+    The chrome's height, declared once and reserved by everything that pins
+    beneath it. It used to be whatever the padding happened to add up to, and
+    nothing accounted for it — see `.lp-stage`.
+  */
+  --lp-chrome-h: 64px;
+  min-height: 100dvh;
+  background: var(--bone-200);
+  color: var(--ink-900);
+}
+
+/* --- CHROME --------------------------------------------------------------
+   Deliberately thin. §13's note is that "a marketing header with six links
+   would be the first thing on the page that is not the product", so there is
+   a wordmark, the two switches the product itself offers, and one action. */
+
+.lp-chrome {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-nav);
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+  height: var(--lp-chrome-h);
+  padding: 0 var(--lp-gutter);
+  /*
+    Opaque, and **no `backdrop-filter`.** A blurred sticky bar makes the
+    compositor re-blur its strip on every frame of a scroll, and this page is
+    eight acts of scroll — it was the most expensive thing on it for the least
+    reason. §19 does not sanction it, and the chrome is 56px of solid ground
+    over a page whose whole argument is material rather than glass. Removed in
+    the P14 smoothness pass.
+  */
+  background: var(--bone-200);
+  border-bottom: 1px solid color-mix(in srgb, var(--bone-600) 55%, transparent);
+}
+
+.lp-chrome__mark {
+  color: var(--ink-900);
+  text-decoration: none;
+  letter-spacing: 0.14em;
+}
+.lp-chrome__mark:hover { color: var(--cobalt-text); }
+
+.lp-chrome__nav {
+  display: flex;
+  gap: var(--s-5);
+  margin-inline-start: var(--s-4);
+}
+.lp-chrome__nav a {
+  color: var(--ink-500);
+  text-decoration: none;
+  transition: color var(--t-instant) linear;
+}
+.lp-chrome__nav a:hover { color: var(--ink-900); }
+
+.lp-chrome__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-inline-start: auto;
+}
+
+.lp-main { display: block; }
+
+/*
+  Every act root is a grid item of its stage, and most are single-column grids
+  themselves. Both facts need the same floor.
+
+  A single-column `display: grid` has an implicit `auto` track, and an `auto`
+  track sizes to its content's *min-content* width — so one wide child (act
+  05's warning rail, measured at 705px inside a 701px page) widens the act,
+  which widens the stage, which puts a horizontal scrollbar on the whole
+  document. `minmax(0, 1fr)` tells the track it may be narrower than its
+  content, and `min-width: 0` says the same thing to the item. Between them
+  nothing on this page can push the page wider than the window.
+*/
+.lp-hero,
+.lp-two,
+.lp-quiet,
+.lp-stack-act,
+.lp-dark,
+.lp-close { min-width: 0; }
+
+.lp-hero,
+.lp-quiet,
+.lp-dark,
+.lp-close,
+.lp-people,
+.lp-clock,
+.lp-payslip,
+.lp-ledger,
+.lp-record,
+.lp-relation,
+.lp-chain__link,
+.lp-balance,
+.lp-mini,
+.lp-landing,
+.lp-dark__head,
+.lp-dark__clear,
+.lp-people__record,
+.lp-clock__face,
+.lp-ledger__inspect,
+.lp-payslip__issued { grid-template-columns: minmax(0, 1fr); }
+
+/* …and their children, which are the grid items that would otherwise refuse
+   to shrink. */
+.lp-dark > *,
+.lp-quiet > *,
+.lp-people > *,
+.lp-clock > *,
+.lp-payslip > *,
+.lp-close > * { min-width: 0; }
+
+/* --- THE ACT SCAFFOLD ---------------------------------------------------
+   `--act-beats` is set inline by `ActSection`. `dvh` and not `vh`: a mobile
+   browser's collapsing address bar changes `vh` mid-scroll, and every act
+   would resize under the reader's thumb at the moment they were reading it.
+   The same reasoning is written out in `Act.tsx`. */
+
+/*
+  **Each act is opaque, so the one leaving cannot show through the one
+  arriving.** The composition change happens in `Act.tsx`, which fades a
+  stage out over the last stretch of its own act — see the note there for
+  the measurement.
+
+  An overlap was tried here first: pulling each act up by `-100dvh` so the
+  incoming one rose over its predecessor like a curtain. It did remove the
+  collision (51 sliding-collision scroll positions → 0) and 6,300px of dead
+  scroll with it — but it also began covering each act one viewport before
+  its section ended, and for a two-beat act that is *the whole act*. Measured:
+  acts 01, 05 and 06 started being covered at progress **0.00**, and acts 02
+  and 03 at 0.50, so half the page would have animated behind a curtain.
+  Reverted. The geometry stays honest and the fade does the work.
+*/
+.lp-act {
+  position: relative;
+  min-height: calc(var(--act-beats, 2) * 100dvh);
+  background: var(--bone-200);
+}
+
+/*
+  The only dark act (§13, Act 05) sets `data-theme="dark"` on itself, so the
+  whole token set flips inside it and nothing in here needs a dark variant.
+
+  It has to restate **both** the ground and the ink. `background` because a
+  themed subtree does not inherit one — but `color` for a subtler reason:
+  `color` is inherited as a *computed value*, so anything inside the act that
+  does not name a token of its own was still carrying the near-black
+  `--ink-900` resolved out on `.lp`, in the light theme. The act's own title
+  was #1A1714 on #241F19. Redefining the token here makes every inherited
+  colour re-resolve inside the dark scope. Found by the P14 pass, at act
+  completion — it was invisible at the top of the page because the act had
+  not been reached.
+*/
+.lp-act--dark {
+  /* `--bone-200` again, but resolved inside this act's dark scope, so it is a
+     different colour from the one `.lp-act` just set. */
+  background: var(--bone-200);
+  color: var(--ink-900);
+}
+
+/*
+  **The stage is exactly one viewport, never more.** A sticky element taller
+  than the viewport pins its top and lets its bottom fall off the bottom of
+  the screen — the act would play with its ending permanently out of frame.
+  So the height is fixed rather than minimum, and the three acts whose
+  objects are intrinsically tall (04's scene, 06's payslip, 07's words) are
+  fitted to it below rather than allowed to push it.
+*/
+/*
+  **The stage is the space the reader can actually see, which is not the
+  viewport.** It used to be `top: 0; height: 100dvh` — the full window —
+  while the chrome sat sticky and opaque across the top 64px of it. So every
+  pinned act was centred inside a box whose top sixteenth was covered, and any
+  act whose composition came close to filling the stage had its first line
+  hidden. On the hero that line is the net salary: the number the entire page
+  exists to show was bisected by the navigation on a short window.
+
+  Reserving the chrome fixes it once for all eight acts, and it is the honest
+  geometry — the stage pins *below* the bar rather than behind it.
+*/
+.lp-stage {
+  position: sticky;
+  top: var(--lp-chrome-h);
+  display: grid;
+  /* `minmax(0, 1fr)`, not the implicit `auto`: an auto track sizes to its
+     item's min-content, and act 05's warning rail pushed the stage 20px wider
+     than the viewport, which put a horizontal scrollbar on the whole page.
+     A `0` floor lets the act shrink instead of the page growing. */
+  grid-template-columns: minmax(0, 1fr);
+  align-content: center;
+  height: calc(100dvh - var(--lp-chrome-h));
+  max-height: calc(100dvh - var(--lp-chrome-h));
+  padding: var(--s-6) var(--lp-gutter);
+  overflow: hidden;   /* an act never leaks into its neighbour */
+}
+
+/* On a short window the padding is the first thing to give way — 96px of it
+   is the difference between act 04 fitting and being clipped at 1280x800. */
+/*
+  **Short windows, everywhere — not only on the hero.**
+
+  Reserving the chrome took 64px off every stage, and four acts that had been
+  fitting by a hair stopped fitting: measured at 1500x820, acts 04–07 ran
+  7–18px past their stage. Trading one clipped act for four would not have
+  been a fix. The head is where the room is: a display headline plus its
+  kicker and body is the tallest fixed block every act shares, and it is the
+  part that loses the least by being set a step tighter. Below 720px the
+  padding goes too — at that point the window is shorter than a laptop lid and
+  air is the only thing left to spend.
+*/
+@media (max-height: 900px) {
+  .lp-stage { padding-block: var(--s-5); }
+  .lp-head__kicker { margin-bottom: var(--s-3); }
+  .lp-head__body { margin-top: var(--s-4); }
+  /* Through the scale's knob, not an override — see the note above
+     `.t-display-xl` in `index.css` for why a one-class `font-size` rule in
+     this file cannot win. */
+  .lp-head { --fs-display-m: clamp(30px, 3.4vw, 46px); }
+}
+
+@media (max-height: 860px) {
+  .lp-stage { padding-block: var(--s-4); }
+}
+
+@media (max-height: 780px) {
+  .lp-stage { padding-block: var(--s-3); }
+  .lp-head {
+    --fs-display-m: clamp(26px, 2.9vw, 38px);
+    /* The act's paragraph steps down with its headline. */
+    --fs-body-l: 15px;
+    --lh-body-l: 1.5;
+  }
+  .lp-head__body { margin-top: var(--s-3); }
+  .lp-note { margin-top: var(--s-3); }
+}
+
+/*
+  **Below this the page stops being a set of scenes.**
+
+  Eight acts choreographed to a viewport need a viewport to be choreographed
+  in. Past a point the only way to keep a pinned stage from clipping is to
+  shrink its contents until the argument is unreadable, which is a worse
+  outcome than not pinning at all — so at or below 720px of height the stages
+  un-pin and the page becomes eight ordinary sections that simply scroll.
+
+  720 is where the line goes because that is the last height at which all
+  eight acts were measured to fit with room to spare (worst case +4px). At 670
+  they no longer did — act 04's scene ran 9px past its stage — and a band of
+  window sizes where one act is quietly cropped is exactly the defect this
+  whole pass exists to remove. Better a clean fallback than a ragged edge.
+
+  That is not a new state to design: it is exactly the composed static frame
+  `prefers-reduced-motion` already gets, and every act is already built to hold
+  up in it. Nothing is hidden, nothing is clipped, and the chrome stops
+  floating for the same reason it does there.
+*/
+@media (max-height: 720px) {
+  .lp-act { min-height: 0; }
+  .lp-stage {
+    position: static;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    align-content: start;
+    padding-block: var(--s-7);
+    overflow: visible;
+  }
+  .lp-chrome { position: static; }
+  .lp-payslip { zoom: 1; }
+}
+
+.lp-stage--left   { justify-items: start; }
+.lp-stage--right  { justify-items: end; }
+.lp-stage--centre { justify-items: center; }
+
+/* --- AN ACT'S WORDS ----------------------------------------------------- */
+
+.lp-head { max-width: var(--lp-measure); }
+
+.lp-head__kicker {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  margin: 0 0 var(--s-4);
+  color: var(--ink-400);
+}
+
+/* `01 / 08`. A reader four screens into a scroll-driven page deserves to know
+   how much is left, and a progress bar would be a second timeline competing
+   with THE LINE. */
+.lp-head__index {
+  /* `--ink-400`, not `--ink-300`: 11px is small text and needs 4.5:1, and
+     `--ink-300` is the non-text token — 2.15:1 here. Exactly the misuse P14
+     finding 3 records, caught by running the pass on this page too. */
+  color: var(--ink-400);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+.lp-head__index::after { content: " / 08"; }
+
+.lp-head__title {
+  margin: 0;
+  text-wrap: balance;
+  min-width: 0;
+}
+
+.lp-head__body {
+  margin-top: var(--s-5);
+  max-width: var(--lp-measure);
+  color: var(--ink-500);
+}
+.lp-head__body p { margin: 0 0 var(--s-3); }
+.lp-head__body p:last-child { margin-bottom: 0; }
+
+.lp-note {
+  margin: var(--s-4) 0 0;
+  color: var(--ink-400);
+  max-width: 46ch;
+}
+
+/* --- TWO-COLUMN ACTS ---------------------------------------------------
+   Words and one object. `--lp-split` keeps the asymmetry in one place: the
+   object is the larger half, because the object is the argument. */
+
+.lp-two {
+  --lp-split: 0.85fr 1.15fr;
+  display: grid;
+  grid-template-columns: var(--lp-split);
+  gap: var(--s-8);
+  align-items: center;
+  width: 100%;
+  max-width: 1200px;
+}
+.lp-two__words,
+.lp-two__object { min-width: 0; }
+
+/* Inverted puts the object first in the visual order without moving it in the
+   DOM — so the reading order stays words-then-object for a screen reader and
+   for anyone tabbing, while the composition alternates as §13 requires. */
+.lp-two--inverted { grid-template-columns: 1.15fr 0.85fr; }
+.lp-two--inverted .lp-two__object { order: -1; }
+
+.lp-two__aside {
+  margin: var(--s-5) 0 0;
+  color: var(--ink-500);
+  max-width: var(--lp-measure);
+}
+
+/* --- ACT 00 · THE HERO --------------------------------------------------
+   Centred, per §13 — one of only two acts that may be. */
+
+.lp-hero {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  justify-items: center;
+  gap: var(--s-6);
+  width: 100%;
+  max-width: 1100px;
+  text-align: center;
+
+  /* Where the light is. Written by the act on pointer move; at rest it sits
+     on the figure, because the figure is what the page is lit for. A touch
+     device never moves it, and that resting frame is the composed one. */
+  --lx: 50%;
+  --ly: 50%;
+}
+
+/* --- THE PLATE · the guilloché the figure was struck from -----------------
+   Behind the number, scaled with it, and masked to nothing well before it
+   reaches an edge — a plate lying under a lamp, never a rectangle of tint.
+   The pointer moves the light across the engraving's own ink and nowhere
+   else: the figure itself is struck into it and is not tinted, washed or
+   boxed by anything. */
+
+.lp-hero__plate {
+  position: absolute;
+  z-index: -1;
+  /*
+    38%, not 50%. The figure block runs from the label down through the claim,
+    the facts and the button, so its centre lands on the body copy — which put
+    the cleared reserve behind a sentence and the densest weave behind the
+    number, exactly backwards. The medallion belongs on the figure it was
+    struck for.
+  */
+  top: 38%;
+  left: 50%;
+  translate: -50% -50%;
+  width: min(104vmin, 820px);
+  aspect-ratio: 1;
+  pointer-events: none;
+
+  /*
+    The mask lives here, on the element that does **not** turn, so the reader's
+    light stays where they put it and the engraving moves under it.
+
+    A ring, not a disc — the **reserve**. Every engraved note clears the ink
+    where the value is printed, because the one thing on a plate that must
+    never be hard to read is the number. Drawn as a disc, the weave was at its
+    densest directly under "49,485" and the two were fighting; cleared at the
+    centre, the engraving frames the figure instead of crowding it, which is
+    what a medallion has always done. The falloff runs all the way to
+    transparent inside its own box — an earlier pass stopped at 74% and the
+    remaining 26% was a visible grey rectangle behind the number.
+  */
+  -webkit-mask-image: radial-gradient(
+    64% 64% at var(--lx) var(--ly),
+    rgb(0 0 0 / 0.12) 0%, rgb(0 0 0 / 0.2) 18%, #000 40%,
+    rgb(0 0 0 / 0.62) 62%, transparent 100%
+  );
+          mask-image: radial-gradient(
+    64% 64% at var(--lx) var(--ly),
+    rgb(0 0 0 / 0.12) 0%, rgb(0 0 0 / 0.2) 18%, #000 40%,
+    rgb(0 0 0 / 0.62) 62%, transparent 100%
+  );
+  /* Enough ink to read as cut line, not enough to compete with the figure it
+     is under. Checked against the number's own contrast at both themes. */
+  opacity: 0.4;
+}
+
+.lp-rosette { width: 100%; height: 100%; overflow: visible; display: block; }
+
+.lp-rosette__plate {
+  fill: none;
+  stroke: var(--ink-900);
+  stroke-width: 0.7;
+}
+
+/* The turn, on an HTML wrapper the compositor can promote — see `Rosette.tsx`
+   for why this is not on the SVG group. `will-change` is declared here and
+   nowhere else on the page: it is the one element that genuinely animates for
+   the whole time it is on screen. */
+.lp-hero__plate-spin,
+.lp-hero__plate-spin--on { width: 100%; height: 100%; }
+.lp-hero__plate-spin--on {
+  animation: lp-rosette-turn 480s linear infinite;
+  will-change: transform;
+}
+
+/* An eighth of a revolution per minute — a plate turning under a light, not
+   an object spinning. */
+@keyframes lp-rosette-turn {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-hero__plate-spin--on { animation: none; will-change: auto; }
+}
+
+.lp-hero__figure {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  justify-items: center;
+  gap: var(--s-3);
+  min-width: 0;
+  /* The figure shrinks from its top edge, so `lp-hero__below` can rise by
+     exactly the height it vacates. */
+  transform-origin: top center;
+}
+
+/* Everything under the figure travels together, by the measured amount the
+   figure gave up. One transform on one element, not four. */
+.lp-hero__below {
+  display: grid;
+  justify-items: center;
+  gap: var(--s-6);
+  width: 100%;
+  min-width: 0;
+}
+
+/* --- THE MARK · a rule with the claim set into a gap in it ---------------- */
+
+.lp-hero__mark {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  width: 100%;
+  max-width: 420px;
+  margin: var(--s-4) 0 var(--s-2);
+  color: var(--ink-400);
+  white-space: nowrap;
+}
+.lp-hero__mark-rule {
+  flex: 1;
+  height: 1px;
+  min-width: var(--s-5);
+  background: color-mix(in srgb, var(--bone-800) 60%, transparent);
+}
+
+.lp-hero__records {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--s-4);
+  width: 100%;
+}
+
+.lp-record {
+  display: grid;
+  gap: var(--s-1);
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--bone-100);
+  text-align: left;
+  min-width: 0;
+}
+.lp-record > * { min-width: 0; }
+.lp-record__kicker { margin: 0; color: var(--ink-400); }
+.lp-record__value  { margin: 0; color: var(--ink-900); }
+.lp-record__note   { margin: 0; color: var(--ink-400); }
+
+/* The miniature tower. Act 04 is where the stack is the subject; here it is
+   the last record in a list, so it is drawn small and without labels. */
+.lp-hero__tower { width: 100%; max-width: 420px; }
+
+/* --- THE HERO ON A SHORT WINDOW -------------------------------------------
+   The hero is the tallest composition on the page: the figure, the mark, the
+   claim, the facts, the button, THE LINE, four records and the tower, all in
+   one stage. Reserving the chrome gave the stage honest bounds; these rules
+   make the hero fit inside them rather than be cropped by them.
+
+   Height, not width, is what runs out — a 1900×800 window has plenty of room
+   across and none to spare down — so the queries are on `height` and they take
+   the vertical measurements first: the display figure, then the gaps, then the
+   tower, which is the one element here that is a texture rather than a fact
+   (act 04 is where the stack is the subject). Nothing is hidden at any size;
+   the composition gets tighter, in that order. */
+
+@media (max-height: 900px) {
+  .lp-hero { gap: var(--s-5); }
+  .lp-hero__below { gap: var(--s-5); }
+  .lp-hero { --fs-n-hero: clamp(56px, 7.4vw, 116px); }
+  .lp-hero__cta { margin-top: var(--s-4); }
+  .lp-tower { height: 64px; }
+}
+
+@media (max-height: 800px) {
+  .lp-hero { gap: var(--s-4); }
+  .lp-hero__below { gap: var(--s-4); }
+  .lp-hero { --fs-n-hero: clamp(48px, 6.2vw, 96px); }
+  .lp-hero__mark { margin: var(--s-3) 0 0; }
+  .lp-hero__cta { margin-top: var(--s-3); }
+  .lp-record { padding: var(--s-3); }
+  .lp-tower { height: 48px; }
+}
+
+@media (max-height: 700px) {
+  /* Last out: the tower. It restates in miniature what act 04 performs in
+     full, so it is the only thing on this stage whose absence costs the
+     argument nothing. */
+  .lp-hero__tower { display: none; }
+  .lp-hero { --fs-n-hero: clamp(44px, 5.4vw, 80px); }
+}
+
+.lp-tower {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  height: 84px;
+  width: 100%;
+}
+
+.lp-tower__seg {
+  display: block;
+  flex-basis: 0;
+  min-height: 3px;
+  border-radius: var(--r-xs);
+  background: var(--ink-700);
+}
+
+/* Deductions carve, so they are drawn recessed rather than as more segments
+   in another colour — "eight things happened" is the wrong sentence (§10.2). */
+.lp-tower__seg--carve {
+  background: var(--bone-300);
+  box-shadow: var(--inset-1);
+}
+
+/* --- ACT 01 · PEOPLE ARE NOT ROWS -------------------------------------- */
+
+.lp-people { display: grid; gap: var(--s-5); min-width: 0; }
+
+.lp-people__record {
+  display: grid;
+  gap: var(--s-4);
+  padding: var(--s-6);
+  border-radius: var(--r-xl);
+  background: var(--bone-50);
+  min-width: 0;
+}
+
+.lp-people__head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  min-width: 0;
+}
+
+.lp-people__avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--r-full);
+  background: var(--bone-200);
+  color: var(--ink-500);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.lp-people__name { margin: 0; min-width: 0; }
+.lp-people__meta { margin: var(--s-1) 0 0; color: var(--ink-400); }
+
+.lp-people__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--s-3) var(--s-5);
+  margin: 0;
+  color: var(--ink-500);
+}
+.lp-people__facts > div { min-width: 0; }
+.lp-people__facts dt { color: var(--ink-400); }
+.lp-people__facts dd { margin: 2px 0 0; color: var(--ink-900); }
+.lp-people__net dd,
+.lp-people__net { color: var(--ink-900); font-weight: 500; }
+
+/* The wires. An employee is not a row because things hang off them — so the
+   relations are drawn as connected, not listed.
+
+   This is one `<svg>` layer behind the cards with a `<path>` per relation,
+   sized in percentage units so it tracks the grid it is drawn over. Paths
+   take `stroke`, not `background`. */
+.lp-people__wires {
+  display: block;
+  width: 100%;
+  height: var(--s-7);
+  overflow: visible;
+}
+
+.lp-people__wire {
+  fill: none;
+  stroke: var(--bone-800);
+  stroke-width: 1;
+  stroke-opacity: 0.4;
+  transition:
+    stroke var(--t-base) var(--ease-out),
+    stroke-opacity var(--t-base) var(--ease-out);
+}
+
+/* A wire lights when its relation is reached or pointed at — the connection
+   is the claim, so the connection is what changes. */
+.lp-people__wire--on {
+  stroke: var(--cobalt-500);
+  stroke-opacity: 1;
+}
+
+.lp-people__relations {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--s-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.lp-relation {
+  display: grid;
+  gap: var(--s-1);
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--bone-100);
+  min-width: 0;
+}
+.lp-relation > * { min-width: 0; }
+/* `tabIndex={0}`: pointing at a relation lights its wire, so it has to be
+   reachable by keyboard too, and anything focusable needs §18's ring. */
+.lp-relation:focus-visible {
+  outline: 2px solid var(--cobalt-500);
+  outline-offset: 3px;
+}
+
+.lp-relation--on { background: var(--bone-50); box-shadow: var(--clay-3); }
+.lp-relation--on .lp-relation__icon { color: var(--cobalt-text); }
+
+.lp-relation__icon {
+  color: var(--ink-400);
+  transition: color var(--t-base) var(--ease-out);
+}
+.lp-relation__label { margin: 0; color: var(--ink-400); }
+.lp-relation__value { margin: 0; color: var(--ink-900); }
+.lp-relation__note  { margin: 0; color: var(--ink-400); }
+
+/* --- ACT 02 · TIME BECOMES PAY ----------------------------------------- */
+
+.lp-clock { display: grid; gap: var(--s-4); min-width: 0; }
+
+.lp-clock__face {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-6);
+  border-radius: var(--r-xl);
+  min-width: 0;
+}
+
+.lp-clock__label { margin: 0; color: var(--ink-400); }
+.lp-clock__now {
+  margin: 0;
+  font-size: 40px;
+  line-height: 1;
+  color: var(--ink-900);
+  font-variant-numeric: tabular-nums;
+}
+.lp-clock__rule { width: 100%; margin: var(--s-2) 0; }
+
+.lp-clock__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: var(--s-3) var(--s-4);
+  margin: 0;
+}
+.lp-clock__grid > div { min-width: 0; }
+.lp-clock__grid dt { color: var(--ink-400); }
+.lp-clock__grid dd { margin: 2px 0 0; color: var(--ink-900); }
+
+/* Overtime is the one figure in this act that means something extra, so it is
+   the one that carries a signal — and it carries it as text, which is what
+   `--orange-text` exists for (P14 finding 2). */
+.lp-clock__over dd { color: var(--orange-text); }
+
+/* The channel the hours travel down. It is THE LINE's own milled track turned
+   on its side — same floor, same white lip below it, because a second kind of
+   groove would be a second material. */
+.lp-travel {
+  position: relative;
+  height: 96px;
+  display: grid;
+  place-items: center;
+}
+
+.lp-travel__floor {
+  position: absolute;
+  inset: 0 auto;
+  left: 50%;
+  translate: -50% 0;
+  width: 6px;
+  height: 100%;
+  border-radius: var(--r-full);
+  background: var(--bone-300);
+  box-shadow: var(--inset-1);
+}
+
+.lp-travel__packet {
+  position: absolute;
+  left: 50%;
+  translate: -50% -50%;
+  width: 14px;
+  height: 14px;
+  border-radius: var(--r-full);
+  background: var(--orange-500);
+  box-shadow: var(--clay-1);
+}
+
+.lp-travel__arrow {
+  position: absolute;
+  bottom: 0;
+  color: var(--ink-300);
+}
+
+/* Where it lands: the `OT` block of the stack, at its real size. */
+.lp-landing {
+  display: grid;
+  gap: var(--s-1);
+  padding: var(--s-4) var(--s-5);
+  border-radius: var(--r-lg);
+  background: var(--bone-50);
+  min-width: 0;
+}
+.lp-landing > * { min-width: 0; }
+.lp-landing__code { margin: 0; color: var(--orange-text); }
+.lp-landing__note { margin: 0; color: var(--ink-400); }
+
+/* --- ACT 03 · LEAVE IS A STATE CHANGE ---------------------------------- */
+
+.lp-quiet {
+  display: grid;
+  gap: var(--s-7);
+  width: 100%;
+  max-width: 1100px;
+}
+
+/* The chain: request → approval → allocation → payslip. Four links, and the
+   arrows are the point — a leave request is not an event, it is a state
+   change that propagates. */
+.lp-chain {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--s-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+/*
+  An un-reached link is **flush** — level with the ground, present but not yet
+  an object. Reaching it makes it clay. That is §02's depth order carrying the
+  state, which is both more legible than a 25% opacity and a truer thing to
+  say: the step has not happened yet, it has not become a record.
+*/
+.lp-chain__link {
+  position: relative;
+  display: grid;
+  gap: var(--s-1);
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  background: transparent;
+  box-shadow: none;
+  min-width: 0;
+  transition:
+    background var(--t-base) var(--ease-out),
+    box-shadow var(--t-base) var(--ease-out);
+}
+.lp-chain__link > * { min-width: 0; }
+
+/* The join. Hidden on the last link and whenever the grid has wrapped, since
+   an arrow pointing at nothing is worse than no arrow. */
+.lp-chain__link:not(:last-child)::after {
+  content: "→";
+  position: absolute;
+  top: 50%;
+  right: calc(var(--s-4) * -1);
+  translate: 50% -50%;
+  color: var(--ink-400);
+  font-family: var(--font-mono);
+  pointer-events: none;
+}
+
+/* Reached. The opacity is animated by `motion` (0.25 → 1); what CSS adds is
+   the material change, so a reached link is *raised* rather than merely
+   brighter — §02's depth order carrying the state, not just the alpha. */
+.lp-chain__link--on {
+  background: var(--bone-50);
+  box-shadow: var(--clay-2);
+}
+.lp-chain__link--on .lp-chain__value { color: var(--ink-900); }
+
+.lp-chain__label { margin: 0; color: var(--ink-400); }
+.lp-chain__value { margin: 0; color: var(--ink-500); transition: color var(--t-base) var(--ease-out); }
+.lp-chain__note  { margin: 0; color: var(--ink-400); }
+
+.lp-quiet__pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--s-5);
+  align-items: start;
+  min-width: 0;
+}
+
+.lp-balance {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-6);
+  border-radius: var(--r-xl);
+  min-width: 0;
+}
+.lp-balance > * { min-width: 0; }
+.lp-balance__label  { margin: 0; color: var(--ink-400); }
+.lp-balance__figure { color: var(--ink-900); }
+.lp-balance__of     { margin: 0; color: var(--ink-400); }
+
+/* The payslip lines the leave actually moved. A miniature of the real thing,
+   so the claim "leave is a state change" is shown arriving somewhere. */
+.lp-mini {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-5);
+  border-radius: var(--r-lg);
+  background: var(--bone-50);
+  min-width: 0;
+}
+.lp-mini > * { min-width: 0; }
+.lp-mini__label { margin: 0; color: var(--ink-400); }
+
+.lp-mini__lines { display: grid; gap: var(--s-2); margin: 0; color: var(--ink-500); }
+.lp-mini__lines > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-4);
+  min-width: 0;
+}
+.lp-mini__lines dt { color: var(--ink-500); min-width: 0; }
+.lp-mini__lines dd { margin: 0; color: var(--ink-900); }
+
+.lp-mini__lwp dt { color: var(--orange-text); }
+.lp-mini__negative { color: var(--vermilion-text); }
+
+.lp-mini__rule { width: 100%; margin: var(--s-1) 0; }
+
+.lp-mini__net {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s-4);
+}
+.lp-mini__net > :first-child { color: var(--ink-400); }
+.lp-mini__note { margin: 0; color: var(--ink-400); }
+
+/* --- ACT 04 · PAYROLL IS A SYSTEM, NOT A FORMULA -----------------------
+   The loudest act, and the only one where the object may be taller than the
+   words. The ledger is the sole copy of the rules in both the 3D and the flat
+   version — which is what makes "the substitute is genuinely equivalent" true
+   by construction rather than by inspection. */
+
+.lp-stack-act {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: var(--s-8);
+  align-items: center;
+  width: 100%;
+  max-width: 1200px;
+}
+.lp-stack-act__words,
+.lp-stack-act__object { min-width: 0; }
+
+.lp-ledger {
+  display: grid;
+  gap: 0;
+  margin-top: var(--s-4);
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+/*
+  One rule in the stack. The row is the state; the button inside it is the
+  target. A rule that has not landed yet is present but quiet — it is part of
+  the sequence the act is explaining, so hiding it would misrepresent the
+  arithmetic.
+*/
+/*
+  A rule that has not landed is quiet **by ink, not by opacity.** `opacity`
+  composites the row's text down along with it — at 0.4 the code and the
+  amount measured under 2:1 — and this is a resting state, not a transition:
+  the reader sits with it until they scroll. So "not yet" is a colour, which
+  is the same correction P14 finding 3 applied to the attendance strip and
+  the inactive avatar.
+*/
+.lp-ledger__row {
+  border-radius: var(--r-md);
+  transition: background var(--t-instant) linear;
+}
+.lp-ledger__row .lp-ledger__code,
+.lp-ledger__row .lp-ledger__name,
+.lp-ledger__row .lp-ledger__amount {
+  color: var(--ink-400);
+  transition: color var(--t-base) var(--ease-out);
+}
+
+/* Landed. The row takes full ink, which is the actual signal. */
+.lp-ledger__row--on .lp-ledger__name   { color: var(--ink-700); }
+.lp-ledger__row--on .lp-ledger__amount { color: var(--ink-900); }
+
+/* A deduction carves, so its amount is the one figure in the ledger that
+   reads as a subtraction (§10.2) — once it has landed. */
+.lp-ledger__row--carve.lp-ledger__row--on .lp-ledger__amount {
+  color: var(--vermilion-text);
+}
+
+/* Pointed at — in the ledger or in the scene. The two are the same hover, so
+   they have to look like the same hover. */
+.lp-ledger__row--active {
+  background: var(--bone-100);
+  box-shadow: var(--clay-1);
+}
+
+/* One rule. A button, because every figure on this page opens (§10.3) — the
+   same contract the product keeps. */
+.lp-ledger__hit {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr auto;
+  align-items: baseline;
+  gap: var(--s-3);
+  width: 100%;
+  /* Tight on purpose: eight of these, a totals block and the inspect panel
+     have to fit one viewport beside the scene. At form rhythm they did not. */
+  padding: 3px var(--s-3);
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--t-instant) linear;
+  min-width: 0;
+}
+.lp-ledger__hit > * { min-width: 0; }
+.lp-ledger__hit:hover { background: var(--bone-100); }
+.lp-ledger__hit:focus-visible {
+  outline: 2px solid var(--cobalt-500);
+  outline-offset: 3px;
+}
+
+.lp-ledger__code   { margin: 0; color: var(--ink-400); }
+.lp-ledger__name   { margin: 0; color: var(--ink-700); }
+.lp-ledger__amount { margin: 0; color: var(--ink-900); justify-self: end; }
+
+.lp-ledger__totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--s-2) var(--s-5);
+  margin: var(--s-3) 0 0;
+  padding-top: var(--s-3);
+  border-top: 1px solid color-mix(in srgb, var(--bone-600) 60%, transparent);
+}
+.lp-ledger__totals > div { min-width: 0; }
+.lp-ledger__totals dt { color: var(--ink-400); }
+.lp-ledger__totals dd { margin: 2px 0 0; color: var(--ink-900); }
+
+.lp-ledger__net dd { color: var(--ink-900); font-weight: 500; }
+
+.lp-ledger__inspect {
+  display: grid;
+  gap: var(--s-1);
+  margin-top: var(--s-4);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--bone-300);
+  box-shadow: var(--inset-1);
+  min-width: 0;
+}
+.lp-ledger__inspect > * { min-width: 0; }
+.lp-ledger__inspect-code { margin: 0; color: var(--cobalt-text); }
+.lp-ledger__inspect-note { margin: 0; color: var(--ink-400); }
+
+/* The scene. A fixed aspect box so the act does not resize when the renderer
+   mounts — a scene that changes the page's height as it arrives would move
+   the words the reader is in the middle of. */
+/*
+  Sized against the shorter axis. `aspect-ratio` plus a `max-height` in `dvh`
+  means the scene shrinks when the window is short instead of pushing the
+  stage past one viewport — and a fixed box also stops the act resizing at
+  the moment the renderer mounts, which would move the words the reader is
+  in the middle of.
+*/
+.lp-scene {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  max-width: min(560px, 56dvh);
+  max-height: 56dvh;
+  min-height: 260px;
+  justify-self: center;
+}
+
+/* The flat substitute is the product's own `Stack`, not a picture of one, so
+   it is laid out as a component rather than a canvas. */
+.lp-scene--flat {
+  aspect-ratio: auto;
+  display: grid;
+  align-content: center;
+  gap: var(--s-4);
+}
+
+.lp-scene__hint {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  margin: 0;
+  color: var(--ink-400);
+}
+.lp-scene__hint--static { position: static; }
+
+.lp-scene__waiting {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--r-2xl);
+}
+
+/* --- ACT 05 · NOTHING GETS PAID UNTIL IT MAKES SENSE -------------------
+   The only dark act (§13). It mirrors the payrun room exactly, which is why
+   it borrows the room's tokens rather than defining a palette. */
+
+.lp-dark {
+  display: grid;
+  gap: var(--s-6);
+  width: 100%;
+  max-width: 1000px;
+}
+
+.lp-dark__head {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-5) var(--s-6);
+  border-radius: var(--r-xl);
+  background: var(--bone-100);
+  box-shadow: var(--clay-2);
+  min-width: 0;
+}
+.lp-dark__head > * { min-width: 0; }
+
+.lp-dark__run { margin: 0; color: var(--ink-400); }
+
+.lp-dark__counts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-2) var(--s-5);
+  margin: 0;
+  color: var(--ink-900);
+}
+
+/* Each count is a rolling figure and the word it counts. The figure is
+   inherited by the rolling number's own type scale; the word beside it stays
+   at the paragraph's, so the pair reads as one phrase rather than as a stat
+   tile. */
+.lp-dark__count {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  color: inherit;
+}
+.lp-dark__count .n-l,
+.lp-dark__count .n-m { color: currentColor; }
+
+/* The three states of a run, and each carries text as well as a hue — §18's
+   colour-independence rule means the words "ready", "warnings" and "blocked"
+   are doing the work and the colour is confirming it. */
+.lp-dark__ready { color: var(--jade-text); }
+.lp-dark__warn  { color: var(--orange-text); }
+.lp-dark__stop  { color: var(--vermilion-text); }
+
+.lp-dark__total { margin: 0; color: var(--ink-400); }
+
+/* The stage holds one of two states and must not resize between them, or the
+   sweep would be a reflow rather than a departure. */
+.lp-dark__stage {
+  display: grid;
+  align-content: start;
+  min-height: 200px;
+}
+
+.lp-dark__warning { min-width: 0; }
+
+.lp-dark__clear {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-4);
+  padding: var(--s-5) var(--s-6);
+  border-radius: var(--r-lg);
+  background: var(--bone-100);
+  box-shadow: var(--clay-2);
+  min-width: 0;
+}
+.lp-dark__clear > div { min-width: 0; }
+
+.lp-dark__tick {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-full);
+  background: var(--jade-solid);
+  color: var(--on-solid);
+}
+
+.lp-dark__clear-title { margin: 0; color: var(--ink-900); text-wrap: balance; }
+.lp-dark__clear-note  { margin: var(--s-2) 0 0; color: var(--ink-400); max-width: 54ch; }
+
+/* --- ACT 06 · THE PAYSLIP IS THE RECEIPT ------------------------------- */
+
+/*
+  The payslip is the one object on the page with a genuinely fixed height —
+  it is a page, and §10.4 makes it a physical one. So it is fitted to the
+  stage by transform rather than by reflow: the same receipt, held a little
+  further away. Reflowing it instead would re-wrap a document the act is
+  arguing is a document.
+*/
+.lp-payslip {
+  display: grid;
+  gap: var(--s-5);
+  justify-items: center;
+  min-width: 0;
+  transform-origin: center;
+}
+
+/* `zoom` and not `scale`: a transform does not change layout, so a scaled
+   payslip still reserved its full height and the stage clipped it top and
+   bottom. `zoom` shrinks the box as well as the paint, which is the whole
+   point — the object has to take up less room, not merely look smaller. */
+/* Each step is one notch tighter than it was: the stage lost 64px to the
+   chrome it now reserves, and the payslip is fitted to the stage rather than
+   to the window.
+
+   The ladder is ordered tallest-first, and it has to be: several of these
+   queries match at once on a short window, so the last matching rule is the
+   one that applies. A step added out of order would be overruled by every
+   step below it and do nothing.
+
+   The 1100 step is new. The ladder used to begin at 1000, which left the
+   1001–1100 band unfitted — a payslip at full size in a stage that is now
+   64px shorter, measured overflowing by 13px at 1050. Above 1100 there is
+   genuinely room and nothing is applied. */
+@media (max-height: 1100px) { .lp-payslip { zoom: 0.92; } }
+@media (max-height: 1000px) { .lp-payslip { zoom: 0.80; } }
+@media (max-height: 860px)  { .lp-payslip { zoom: 0.72; } }
+@media (max-height: 780px)  { .lp-payslip { zoom: 0.62; } }
+@media (max-height: 700px)  { .lp-payslip { zoom: 0.58; } }
+
+.lp-payslip__issued {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-5) var(--s-6);
+  border-radius: var(--r-lg);
+  width: 100%;
+  min-width: 0;
+}
+.lp-payslip__issued > * { min-width: 0; }
+.lp-payslip__issued p:first-child { margin: 0; color: var(--ink-400); }
+.lp-payslip__issued-title { margin: 0; color: var(--ink-900); text-wrap: balance; }
+.lp-payslip__issued-note  { margin: 0; color: var(--ink-400); max-width: 54ch; }
+
+.lp-payslip__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  margin-top: var(--s-5);
+}
+
+/* --- ACT 07 · THE CLOSE ------------------------------------------------
+   Centred, per §13 — the second and last act that may be. */
+
+.lp-close {
+  display: grid;
+  justify-items: center;
+  gap: var(--s-5);
+  width: 100%;
+  max-width: 900px;
+  text-align: center;
+}
+
+.lp-close__words { display: grid; gap: 0; justify-items: center; }
+
+/*
+  **The words are sized by the viewport's height, not only its width.**
+
+  `t-display-xl` is `clamp(72px, 11vw, 168px)`, which knows nothing about how
+  tall the window is — so on a wide, ordinary laptop window all four lines
+  rendered at the 168px cap, and four lines plus the CTA, the note and THE
+  LINE came to roughly 965px inside a ~940px stage. The stage is `overflow:
+  hidden` by design (an act must never leak into its neighbour), so the act
+  did not scroll — it was **cut**, top and bottom, with "People." sliced
+  through and half a screen of empty ground above it.
+
+  There was a rule here that was meant to rescue exactly this case by
+  tightening the leading on short windows. It set `line-height: 0.98` — but
+  the base is `0.86`, so the "tightening" rule was letting the words out by
+  14% precisely when there was least room for them. It made the clipping
+  worse, which is why the act broke on a laptop and not on the 1400px-tall
+  window it was written on.
+
+  The fix is in `.lp-close__words` below, which sets the scale's size and
+  leading knobs rather than restating `font-size` here.
+*/
+.lp-close__words {
+  /*
+    The close is four `display-xl` lines, and `t-display-xl` knows only how
+    *wide* the window is — so on a wide, ordinary laptop all four rendered at
+    the 168px cap and the act ran past a stage that is `100dvh − 64px` tall.
+    The stage is `overflow: hidden` by design (an act must never leak into its
+    neighbour), so the act did not scroll: it was cut, top and bottom, with
+    "People." sliced through.
+
+    Sized against the *stage* rather than the window, through the scale's own
+    knob — see the note above `.t-display-xl`. Four lines at `0.84` leading
+    come to about 55% of the viewport whatever its size, which leaves the
+    close its air and its ending inside the frame.
+  */
+  --fs-display-xl: min(11vw, 168px, 16dvh);
+  --lh-display-xl: 0.84;
+}
+
+.lp-close__word {
+  margin: 0;
+  /* Display sizes only need 3:1, and `--ink-300` does not clear even that
+     (2.15:1). The unanswered words are quiet at `--ink-400`; the answer below
+     is full ink, so the contrast between them still carries the beat. */
+  color: var(--ink-400);
+  text-wrap: balance;
+  transition: color var(--t-base) var(--ease-out);
+}
+
+/* The last word is the one the page has been arguing for, so it is the only
+   one in full ink.
+
+   One class, and it can stay one class: the size fitting above is done by
+   setting a variable on the parent rather than by out-specifying the type
+   utility, so nothing here has to be bumped to keep up. An earlier pass did
+   bump the base rule to two classes and this rule quietly lost — all four
+   lines went out at `--ink-400`, dropping the only contrast the act has. That
+   is the second-order cost of a specificity fight, and it is the reason the
+   scale exposes knobs instead. */
+.lp-close__word--answer { color: var(--ink-900); }
+
+@media (max-height: 780px) {
+  /* Below this the note is the first thing that can go: the button says the
+     same thing and the footer repeats the demo-account sentence. */
+  .lp-close { gap: var(--s-4); }
+  .lp-close__note { display: none; }
+}
+
+.lp-close__cta { margin-top: var(--s-3); }
+.lp-close__note { margin: 0; color: var(--ink-400); max-width: 52ch; }
+
+.lp-close__line { width: 100%; max-width: 760px; min-width: 0; }
+
+/* --- FOOT --------------------------------------------------------------- */
+
+.lp-foot {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-7) var(--lp-gutter) var(--s-8);
+  border-top: 1px solid color-mix(in srgb, var(--bone-600) 55%, transparent);
+  color: var(--ink-400);
+}
+.lp-foot p { margin: 0; max-width: var(--lp-measure); }
+.lp-foot__marks { letter-spacing: 0.04em; }
+
+/* --- RESPONSIVE · §06.2 -------------------------------------------------
+   Below the tablet breakpoint every act becomes one column and the object
+   follows the words, because an object squeezed to half of 390px is not an
+   argument. §13's last criterion is that mobile is "visually impressive, not
+   merely functional" — so the acts keep their objects and their scroll, at
+   full width, rather than degrading to a list of headlines. */
+
+/* Two columns hold down to 900px. The tablet range keeps the composition —
+   it is the composition that carries §13's argument — and only the gutter
+   and the gap give way. */
+@media (max-width: 1100px) {
+  .lp { --lp-gutter: var(--s-5); }
+  .lp-two,
+  .lp-two--inverted,
+  .lp-stack-act { gap: var(--s-6); }
+}
+
+/*
+  **Below 900px the page stops being a set of scenes and becomes a document.**
+
+  Two stacked halves cannot fit one viewport — measured, at 1024x768, acts 02,
+  04 and 06 ran to 803, 1196 and 1135 px against 768 — and a pinned stage that
+  does not fit clips its own ending. So when the acts go single-column the
+  pinning is released along with the fixed height: the reader scrolls past
+  eight full-width sections instead of playing eight cropped ones.
+
+  Nothing is lost that §13 asks for. Every act's scroll-driven values still
+  run 0 → 1 as it passes, the objects are at full width rather than squeezed
+  into half of 390px, and the last criterion — "mobile is visually
+  impressive, not merely functional" — is better served by an object you can
+  see than by a scene with its bottom cut off.
+*/
+@media (max-width: 900px) {
+  .lp-two,
+  .lp-two--inverted,
+  .lp-stack-act { grid-template-columns: minmax(0, 1fr); }
+  .lp-two--inverted .lp-two__object { order: 0; }
+
+  .lp-act { min-height: 0; }
+  .lp-stage {
+    position: static;
+    height: auto;
+    max-height: none;
+    align-content: start;
+    padding-block: var(--s-8);
+    overflow: visible;
+  }
+  /* Fitting to a viewport is meaningless once nothing is pinned. */
+  .lp-payslip { zoom: 1; }
+  .lp-scene { max-width: min(560px, 100%); max-height: none; }
+}
+
+@media (max-width: 767px) {
+  .lp { --lp-gutter: var(--s-4); }
+  .lp-chrome__nav { display: none; }   /* the acts are one scroll away */
+  .lp-hero__records { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+  .lp-clock__now { font-size: 32px; }
+  .lp-people__record,
+  .lp-clock__face,
+  .lp-balance { padding: var(--s-4); }
+
+  /* An arrow between links only means anything while they are in a row. */
+  .lp-chain__link:not(:last-child)::after { content: none; }
+}
+
+/* --- §07.5 · REDUCED MOTION --------------------------------------------
+   The acts already render one composed static frame each — every `motion`
+   value in `landing/` is gated on `useReducedMotion`, and `scroll.ts`
+   bypasses its spring entirely. What is left to do here is the CSS: no
+   transition on this page may outlive the 120ms §07.5 allows, and the sticky
+   stages stop pinning so the page becomes eight ordinary sections that a
+   reader scrolls past rather than eight scenes that play. */
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-act { min-height: 0; }
+
+  /*
+    **The bar stops floating, because nothing else is moving.**
+
+    Under reduced motion the stages un-pin and the page becomes eight ordinary
+    sections that simply scroll. A sticky, opaque bar over a scrolling document
+    then does the one thing the pinned layout was just taught not to do: it
+    passes across the content, and the reader meets the hero's net salary cut
+    in half by the navigation. That is what a reader on this setting actually
+    saw. A static header costs a scroll back to reach the links and removes the
+    only element on the page still travelling under this preference.
+  */
+  .lp-chrome { position: static; }
+  .lp-stage {
+    position: static;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    align-content: start;
+    padding-block: var(--s-8);
+    overflow: visible;
+  }
+  /* Nothing is being fitted to a viewport any more, so the objects go back to
+     their natural size — the page is eight sections, not eight scenes. */
+  .lp-payslip { zoom: 1; }
+  .lp-chrome__nav a,
+  .lp-ledger__hit,
+  .lp-ledger__row,
+  .lp-chain__link--on,
+  .lp-relation__icon,
+  .lp-people__wire,
+  .lp-close__word { transition-duration: 120ms !important; }
+
+  /*
+    `Act04Payroll` sets `on = reduced || i < step`, so under reduced motion
+    every rule is already landed on the first frame — §07.5's "one static
+    composed frame" — and the `--on` colours apply without help.
+  */
+}
+
+
+/* ============================================================================
+   SHORT-WINDOW OVERRIDES FOR INDIVIDUAL ACTS
+
+   **These live at the end of the file on purpose.** The scaffold's height
+   queries sit near the top, next to the `.lp-stage` rules they belong with —
+   and everything they try to override for a *specific* act (`.lp-hero`,
+   `.lp-dark`) is declared hundreds of lines further down, at equal
+   specificity, so the base rule wins and the query does nothing. The first
+   pass of this block was written up there and changed not one computed value.
+
+   Act-level fitting therefore goes last, where the cascade can honour it.
+   ========================================================================= */
+
+/*
+  The dark room needs help sooner than the rest. It carries four blocks the
+  other acts do not — the head, the counts, the rail, and the space reserved
+  for the blocker — and it was measured overflowing its stage by 5px at 800px
+  of viewport, inside a band the 780 tier below does not reach. Its own tier
+  starts where its own measurements say it must, rather than where the others
+  happen to.
+*/
+@media (max-height: 840px) {
+  .lp-dark { gap: var(--s-4); }
+  .lp-dark__head { gap: var(--s-2); }
+  .lp-dark .pp-rail { margin-bottom: var(--s-3); }
+}
+
+@media (max-height: 780px) {
+  /* The hero carries its records and its tower on top of everything else. */
+  .lp-hero { gap: var(--s-3); }
+  .lp-hero__below { gap: var(--s-3); }
+  /*
+    The 200px floor reserves room for the blocker so the rail does not jump
+    when the card lifts away. On a short window that reservation was most of
+    the act's overflow, and the card is shorter than 200px in any case — so
+    the floor comes down rather than the reservation going away, and the rail
+    still does not jump.
+  */
+  .lp-dark__stage { min-height: 148px; }
+}

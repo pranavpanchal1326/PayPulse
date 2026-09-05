@@ -38,12 +38,12 @@
   display: inline-flex;
   align-items: center;
   gap: var(--s-1);
-  color: var(--vermilion-500);
+  color: var(--vermilion-text);
   white-space: nowrap;
 }
 
 .pp-att__ot {
-  color: var(--cobalt-500);
+  color: var(--cobalt-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -95,11 +95,55 @@
 .pp-strip__key--overtime { background: var(--cobalt-500); }
 .pp-strip__key--gap     { background: var(--bone-500); }
 
+/* Calendar and reading, side by side. The calendar keeps its 420px cap — a
+   seven-column month has a natural size and stretching it does not make it
+   more legible — and the reading takes the space that was empty. */
+.pp-strip__body {
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  gap: var(--s-6);
+  align-items: start;
+}
+
 .pp-strip__grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: var(--s-2);
   max-width: 420px;
+}
+
+/* --- THE READING --------------------------------------------------------- */
+
+.pp-strip__read {
+  display: grid;
+  justify-items: start;
+  gap: var(--s-3);
+  align-content: start;
+  padding: var(--s-4) var(--s-5);
+  border-radius: var(--r-md);
+  background: var(--bone-200);
+  box-shadow: var(--clay-1);
+  min-width: 0;
+}
+.pp-strip__read-kicker { margin: 0; color: var(--ink-400); }
+.pp-strip__read-figure { margin: 0; color: var(--ink-900); }
+.pp-strip__read-note   { margin: 0; color: var(--ink-500); max-width: 46ch; }
+
+.pp-strip__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-6);
+  margin: 0;
+}
+.pp-strip__fact dt { margin: 0 0 var(--s-1); color: var(--ink-400); }
+.pp-strip__fact dd { margin: 0; color: var(--ink-900); font-size: 15px; }
+.pp-strip__fact--cobalt dd    { color: var(--cobalt-text); }
+.pp-strip__fact--orange dd    { color: var(--orange-text); }
+.pp-strip__fact--vermilion dd { color: var(--vermilion-text); }
+
+@media (max-width: 1080px) {
+  .pp-strip__body { grid-template-columns: minmax(0, 1fr); }
+  .pp-strip__grid { max-width: none; }
 }
 
 .pp-strip__weekday {
@@ -128,7 +172,11 @@
 
 /* A day with no row is a gap — flat, quiet, and deliberately empty. That is
    the same claim THE LINE makes by drawing nothing (§10.1). */
-.pp-strip__day--none { opacity: 0.5; }
+/* The gap was drawn with `opacity: 0.5`, which took the day number down with
+   the cell — fifteen cells at ~1.9:1, and the number is how you tell which
+   day you are looking at. The cell still recedes; it does so by dropping to
+   the well floor rather than by fading, so the ink stays at 5.42:1. P14. */
+.pp-strip__day--none { background: var(--bone-300); color: var(--ink-400); }
 
 /* A day with rows is filled. The fill says "recorded", nothing more — what
    went wrong is the bar, in proportion. */
@@ -204,7 +252,7 @@
 /* Only what actually moved. Colouring the whole "after" column would make
    the diff useless — the eye has to land on the one field that changed. */
 .pp-diff__v--changed {
-  color: var(--orange-500);
+  color: var(--orange-text);
   font-weight: 500;
 }
 
@@ -212,4 +260,22 @@
   margin: var(--s-3) 0 0;
   color: var(--ink-400);
   max-width: 60ch;
+}
+
+/* §07.5 — the attendance strip cell carries the only transition in this sheet. It is colour and
+   elevation rather than movement, so it keeps its meaning; it is clamped to
+   the 120ms the blueprint allows so no transition in the product outlives
+   the reduced-motion budget. P14. */
+@media (prefers-reduced-motion: reduce) {
+  .pp-strip__day { transition-duration: 120ms !important; }
+}
+
+/* A closed day worth no more than half the schedule, marked in the register.
+   The badge sits after the figure so the column still reads as a number
+   column when it is scanned rather than read. */
+.pp-att__worked {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  justify-content: flex-end;
 }

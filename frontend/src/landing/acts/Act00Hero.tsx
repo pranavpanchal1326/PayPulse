@@ -21,6 +21,32 @@
  *   0.90 → 1.00   the figure lands where it started
  * ```
  *
+ * **The figure is engraved, not lit.** The first pass put a raking light on
+ * the number and ruled ledger paper behind it. Both were wrong, and wrong in
+ * the way decoration usually is: a `soft-light` wash over a bone ground is a
+ * pale rectangle with the reader's cursor in it, so the most important number
+ * on the page sat in a grey box, and faint horizontal rules across an empty
+ * field read as a rendering fault rather than as paper.
+ *
+ * What replaced them is a *guilloché rosette* — the interfering hairline
+ * curves cut on a rose engine that every banknote in the world uses to say
+ * the one thing this page opens by saying: this number is real and could not
+ * have been invented. And it is not a pattern dropped behind a figure. Its
+ * lobe counts, radii and phases are derived from the payslip — the net, the
+ * rules, the payable and unpaid days — so it is *that payslip's* plate, and a
+ * different payslip engraves a visibly different one. See `Rosette.tsx`.
+ *
+ * The pointer still moves a light, but only over the rosette's own ink and
+ * never over the figure: the number is struck into the plate, and struck ink
+ * does not have a highlight box around it.
+ *
+ * **The hole under the figure is closed.** `scale` does not change a layout
+ * box, so a figure drawn at 0.6 left four tenths of its own height as dead
+ * space above THE LINE for the entire middle of the act — the single largest
+ * void on the page. The figure now shrinks from its top edge and everything
+ * below rises by exactly the height it gave up, measured rather than guessed,
+ * so the composition closes up instead of coming apart.
+ *
  * **The user controls time, twice over.** Scrolling moves the bead along the
  * month. But the bead is also the product's real, draggable `Line` — and the
  * moment a reader touches it, scroll stops driving it and the reader owns it
@@ -28,7 +54,7 @@
  * reliable way to make direct manipulation feel broken (§07.2), so it does not
  * fight: it concedes, once, permanently, and says so in the caption.
  */
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import {
   motion,
@@ -42,6 +68,7 @@ import { formatMoney } from "@/api/money";
 import { Line, RollingNumber } from "@/components/signature";
 import { Button } from "@/components/system";
 import { ActSection } from "../Act";
+import { Rosette } from "../Rosette";
 import { useActProgress, useSmoothProgress } from "../scroll";
 import { additive, deductions, figures, lineModelAt, period, person } from "../story";
 
@@ -55,6 +82,8 @@ const LAND = [0.9, 1];
 
 export function Act00Hero({ onEnter }: { onEnter: () => void }) {
   const ref = useRef<HTMLElement>(null);
+  const stage = useRef<HTMLDivElement>(null);
+  const figure = useRef<HTMLDivElement>(null);
   const raw = useActProgress(ref);
   const progress = useSmoothProgress(raw);
   const reduced = useReducedMotion();
@@ -77,6 +106,55 @@ export function Act00Hero({ onEnter }: { onEnter: () => void }) {
   const span = daysBetween(period.start, period.end);
 
   /**
+   * The height the figure gives up when it shrinks — measured, because the
+   * type scale is fluid and a hard-coded lift would be wrong at every width
+   * except the one it was written at.
+   */
+  const [figureHeight, setFigureHeight] = useState(0);
+  useEffect(() => {
+    const node = figure.current;
+    if (!node || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) =>
+      setFigureHeight(entry.contentRect.height),
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  /**
+   * The light. One rAF-coalesced write of two custom properties on the stage
+   * — never React state, which would re-render the whole act on every pixel
+   * of pointer travel for the sake of a gradient.
+   */
+  const frame = useRef(0);
+  const onPointer = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== "mouse") return;
+    /*
+      Measured against the **figure**, not the act. The properties are read by
+      a mask inside the plate, whose box is the figure's — reading them off the
+      whole stage put the light roughly a third of a screen from where the
+      cursor was, which is worse than not moving at all.
+    */
+    const node = figure.current;
+    if (!node) return;
+    const { clientX, clientY } = event;
+    if (frame.current) return;
+    frame.current = requestAnimationFrame(() => {
+      frame.current = 0;
+      const box = node.getBoundingClientRect();
+      const host = stage.current;
+      if (!host) return;
+      /* Clamped: the plate bleeds well past the figure, so an unclamped
+         reading sends the light off the engraving entirely the moment the
+         pointer leaves the number. */
+      const clamp = (v: number) => Math.max(-40, Math.min(140, v));
+      host.style.setProperty("--lx", `${clamp(((clientX - box.left) / box.width) * 100)}%`);
+      host.style.setProperty("--ly", `${clamp(((clientY - box.top) / box.height) * 100)}%`);
+    });
+  }, []);
+  useEffect(() => () => cancelAnimationFrame(frame.current), []);
+
+  /**
    * Scroll → date, over the same beat the ticks are revealed on, so the bead
    * arrives at the end of the month exactly as the last tick is drawn.
    *
@@ -95,7 +173,14 @@ export function Act00Hero({ onEnter }: { onEnter: () => void }) {
   /* ── The figure ───────────────────────────────────────────────────── */
 
   const figureScale = useTransform(progress, [0, LOOSEN[1], LAND[0], 1], [1, 0.6, 0.6, 1]);
-  const figureY = useTransform(progress, [0, LOOSEN[1], LAND[0], 1], [0, -32, -32, 0]);
+
+  /**
+   * What the rest of the composition rises by. The figure scales from its top
+   * edge, so the space it vacates is exactly `height × (1 − scale)`, and the
+   * records travel that far and no further — the gap under the figure stays
+   * the gap the layout asked for at every point in the act.
+   */
+  const lift = useTransform(figureScale, (v) => -figureHeight * (1 - v));
 
   /* ── The records, each on its own beat ────────────────────────────── */
 
@@ -121,18 +206,56 @@ export function Act00Hero({ onEnter }: { onEnter: () => void }) {
       beats={4}
       lean="centre"
     >
-      <div className="lp-hero">
+      <div className="lp-hero" ref={stage} onPointerMove={onPointer}>
         <motion.div
           className="lp-hero__figure"
-          style={still ? undefined : { scale: figureScale, y: figureY }}
+          ref={figure}
+          style={still ? undefined : { scale: figureScale }}
         >
+          {/*
+            The plate this payslip was struck from — centred on the figure and
+            not on the act, which is where it went first: `.lp-hero` includes
+            the records and the tower, so a plate centred on *it* sat a couple
+            of hundred pixels below the number it belongs to. It is a child of
+            the figure now, so it centres and scales with the number by
+            construction rather than by a second transform kept in step.
+          */}
+          <div className="lp-hero__plate" aria-hidden="true">
+            {/*
+              The mask sits on the parent and the turn on this wrapper, so the
+              light stays where the reader put it while the plate moves under
+              it — and so the browser can promote one layer and rotate the
+              raster rather than re-drawing four thousand points a frame.
+            */}
+            <div className={still ? "lp-hero__plate-spin" : "lp-hero__plate-spin--on"}>
+              <Rosette
+                seed={{
+                  net: figures.net,
+                  ruleCount: figures.ruleCount,
+                  payableDays: figures.payableDays,
+                  unpaidDays: figures.unpaidDays,
+                }}
+              />
+            </div>
+          </div>
+
           <p className="t-micro lp-hero__who">
             Net salary · {person.name} · {period.label}
           </p>
 
           <RollingNumber value={figures.net} scale="hero" label="Net salary" />
 
-          <hr className="hairline lp-hero__rule" />
+          {/*
+            A rule with the claim set into a gap in it — the way a plate is
+            captioned, and the way the page's own hairline was already being
+            used. It replaces a rotated red sticker that said the same thing
+            while looking like it had been applied afterwards.
+          */}
+          <p className="lp-hero__mark t-micro">
+            <span className="lp-hero__mark-rule" aria-hidden="true" />
+            Computed · not illustrated
+            <span className="lp-hero__mark-rule" aria-hidden="true" />
+          </p>
 
           <p className="t-body-l lp-hero__claim">Every number has a reason.</p>
 
@@ -155,6 +278,7 @@ export function Act00Hero({ onEnter }: { onEnter: () => void }) {
           </div>
         </motion.div>
 
+        <motion.div className="lp-hero__below" style={still ? undefined : { y: lift }}>
         {/*
           THE LINE runs full-bleed beneath the figure — §13 is explicit that
           the figure sits on columns 2–8 and the line does not share its
@@ -232,6 +356,7 @@ export function Act00Hero({ onEnter }: { onEnter: () => void }) {
         */}
         <motion.div className="lp-hero__tower" style={still ? undefined : { opacity: rules }}>
           <MiniTower />
+        </motion.div>
         </motion.div>
       </div>
     </ActSection>
