@@ -1,0 +1,215 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   P7 · ATTENDANCE
+   S6 (the register) and S7 (the correction dialog).
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── The three figures ────────────────────────────────────────────────── */
+
+.pp-att__figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--s-4);
+  margin-bottom: var(--s-5);
+}
+
+.pp-att__figure {
+  display: grid;
+  gap: var(--s-1);
+  padding: var(--s-4) var(--s-5);
+  border-radius: var(--r-lg);
+  background: var(--bone-300);
+  box-shadow: var(--inset-1);
+}
+
+/* Only when there is something to warn about — an always-orange tile is
+   wallpaper, and stops being read within a day. */
+.pp-att__figure--warn {
+  background: var(--orange-tint);
+  box-shadow: var(--inset-1);
+}
+.pp-att__figure--warn .pp-att__figure-label { color: var(--orange-deep); }
+
+.pp-att__figure-label { margin: 0; color: var(--ink-400); letter-spacing: 0.08em; }
+.pp-att__figure-support { margin: 0; color: var(--ink-500); }
+
+/* ── Row-level marks ──────────────────────────────────────────────────── */
+
+.pp-att__missing {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  color: var(--vermilion-500);
+  white-space: nowrap;
+}
+
+.pp-att__ot {
+  color: var(--cobalt-500);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── The month strip ──────────────────────────────────────────────────────
+   §12 S6 — the same tick vocabulary as THE LINE, laid out as a month.     */
+
+.pp-strip {
+  padding: var(--s-4) var(--s-5) var(--s-5);
+  margin-bottom: var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--bone-300);
+  box-shadow: var(--inset-2);
+}
+
+.pp-strip__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--s-3);
+  color: var(--ink-400);
+  letter-spacing: 0.08em;
+}
+
+.pp-strip__legend {
+  display: flex;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+  letter-spacing: 0;
+}
+
+.pp-strip__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.pp-strip__key {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-full);
+  display: inline-block;
+}
+
+.pp-strip__key--present  { background: var(--ink-700); }
+.pp-strip__key--late    { background: var(--orange-500); }
+.pp-strip__key--missing  { background: var(--vermilion-500); }
+.pp-strip__key--overtime { background: var(--cobalt-500); }
+.pp-strip__key--gap     { background: var(--bone-500); }
+
+.pp-strip__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--s-2);
+  max-width: 420px;
+}
+
+.pp-strip__weekday {
+  text-align: center;
+  color: var(--ink-400);
+}
+
+.pp-strip__day {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--r-sm);
+  background: var(--bone-400);
+  color: var(--ink-400);
+  font: 400 11px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    box-shadow var(--t-base) var(--ease-out),
+    background var(--t-instant) linear,
+    color var(--t-instant) linear;
+}
+
+/* A day with no row is a gap — flat, quiet, and deliberately empty. That is
+   the same claim THE LINE makes by drawing nothing (§10.1). */
+.pp-strip__day--none { opacity: 0.5; }
+
+/* A day with rows is filled. The fill says "recorded", nothing more — what
+   went wrong is the bar, in proportion. */
+.pp-strip__day--recorded { background: var(--ink-700); color: var(--bone-50); }
+
+/* The problem bar: the share of the day's rows that have one. A sliver for a
+   single late arrival out of twenty-nine; a full bar when the day is broken. */
+.pp-strip__bar {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  display: flex;
+  height: 4px;
+}
+
+.pp-strip__bar i { display: block; height: 100%; }
+.pp-strip__bar--missing { background: var(--vermilion-500); }
+.pp-strip__bar--late { background: var(--orange-500); }
+
+/* Overtime is an EXTRA mark, never a replacement colour — P4 finding 5: a
+   day with overtime is still a day worked, and recolouring it would make the
+   strip show fewer worked days than the payslip counted. */
+.pp-strip__day--overtime::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 4px;
+  height: 4px;
+  border-radius: var(--r-full);
+  background: var(--cobalt-500);
+}
+
+.pp-strip__day:hover { box-shadow: var(--clay-1); }
+
+.pp-strip__day--selected {
+  box-shadow: 0 0 0 2px var(--cobalt-500);
+}
+
+/* ── S7 · before / after ──────────────────────────────────────────────── */
+
+.pp-diff {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-4);
+}
+
+@media (max-width: 560px) {
+  .pp-diff { grid-template-columns: 1fr; }
+}
+
+.pp-diff__side {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--bone-300);
+  box-shadow: var(--inset-1);
+}
+
+.pp-diff__label { margin: 0 0 var(--s-1); color: var(--ink-400); letter-spacing: 0.08em; }
+
+.pp-diff__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.pp-diff__k { color: var(--ink-500); }
+.pp-diff__v { font-variant-numeric: tabular-nums; color: var(--ink-900); }
+
+/* Only what actually moved. Colouring the whole "after" column would make
+   the diff useless — the eye has to land on the one field that changed. */
+.pp-diff__v--changed {
+  color: var(--orange-500);
+  font-weight: 500;
+}
+
+.pp-diff__note {
+  margin: var(--s-3) 0 0;
+  color: var(--ink-400);
+  max-width: 60ch;
+}

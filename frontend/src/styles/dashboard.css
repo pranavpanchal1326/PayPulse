@@ -1,0 +1,227 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   P12 · THE DASHBOARD, and the charts it introduced
+   §14's restrictions are enforced here rather than per chart.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── The five figures ─────────────────────────────────────────────────── */
+
+.pp-dash__rolenote {
+  margin: 0 0 var(--s-4);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--cobalt-tint);
+  color: var(--cobalt-deep);
+  max-width: 78ch;
+}
+
+.pp-dash__figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--s-4);
+  margin-bottom: var(--s-5);
+}
+
+/* Each figure is a control, because each figure opens (§10.3). It looks like
+   a well because it is something you read — the press is a lift, not a fill. */
+.pp-dash__figure {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-5);
+  border-radius: var(--r-lg);
+  background: var(--bone-300);
+  box-shadow: var(--inset-1);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    box-shadow var(--t-base) var(--ease-out),
+    transform var(--t-base) var(--ease-out),
+    background var(--t-instant) linear;
+}
+
+.pp-dash__figure:hover {
+  background: var(--bone-50);
+  box-shadow: var(--clay-2);
+  transform: translateY(-2px);
+}
+
+.pp-dash__figurelabel { color: var(--ink-400); letter-spacing: 0.1em; }
+.pp-dash__figuresupport { color: var(--ink-500); }
+
+/* ── The panels ───────────────────────────────────────────────────────── */
+
+.pp-dash__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: var(--s-4);
+  margin-bottom: var(--s-6);
+}
+
+/* Charts are inset wells, never cards (§14). */
+.pp-dash__panel {
+  display: grid;
+  gap: var(--s-4);
+  align-content: start;
+  padding: var(--s-5);
+  border-radius: var(--r-xl);
+  background: var(--bone-300);
+  box-shadow: var(--inset-2);
+}
+
+.pp-dash__panelhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+
+.pp-dash__panelhead p { margin: 0; color: var(--ink-400); }
+.pp-dash__panelbody { display: grid; gap: var(--s-4); }
+
+.pp-dash__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--s-3);
+  margin: 0;
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--bone-600);
+}
+
+.pp-dash__stat { display: grid; gap: var(--s-1); }
+.pp-dash__stat dt { color: var(--ink-400); letter-spacing: 0.06em; }
+.pp-dash__stat dd { margin: 0; }
+
+.pp-dash__statv { color: var(--ink-900); font-variant-numeric: tabular-nums; }
+.pp-dash__statv--orange { color: var(--orange-500); }
+.pp-dash__statv--cobalt { color: var(--cobalt-500); }
+.pp-dash__statv--vermilion { color: var(--vermilion-500); }
+
+.pp-dash__low { display: grid; gap: var(--s-2); }
+.pp-dash__low .t-micro { margin: 0; color: var(--orange-500); letter-spacing: 0.1em; }
+.pp-dash__low ul { margin: 0; padding-left: var(--s-5); display: grid; gap: var(--s-1); color: var(--ink-500); }
+
+.pp-dash__pending { margin: 0; }
+
+.pp-dash__alerts { margin-bottom: var(--s-6); }
+.pp-dash__alertlist { display: grid; gap: var(--s-3); }
+
+/* ── Horizontal bars · §14 ────────────────────────────────────────────── */
+
+.pp-bars {
+  display: grid;
+  gap: var(--s-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pp-bars__row {
+  display: grid;
+  grid-template-columns: minmax(80px, 120px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.pp-bars__label {
+  color: var(--ink-500);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* No borders, no vertical gridlines — the track is the only frame. */
+.pp-bars__track {
+  position: relative;
+  height: 14px;
+  border-radius: var(--r-xs);
+  background: var(--bone-400);
+  overflow: hidden;
+}
+
+/* Cobalt, radius on the trailing corners only (§14's "top corners only",
+   rotated with the bar). Animates in once, left to right. */
+.pp-bars__bar {
+  display: block;
+  height: 100%;
+  border-start-end-radius: var(--r-sm);
+  border-end-end-radius: var(--r-sm);
+  background: var(--cobalt-500);
+  transform-origin: left center;
+  animation: pp-bar-in var(--t-scene) var(--ease-out) both;
+}
+
+@keyframes pp-bar-in {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pp-bars__bar { animation: none; }
+}
+
+.pp-bars__value {
+  color: var(--ink-900);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.pp-bars__meta { color: var(--ink-400); }
+
+/* ── The trend line · §14 ─────────────────────────────────────────────── */
+
+.pp-trend { margin: 0; display: grid; gap: var(--s-2); }
+.pp-trend__svg { width: 100%; height: auto; overflow: visible; }
+
+/* Horizontal only, ink-300 at 40%, 1px. Nothing vertical. */
+.pp-trend__grid {
+  stroke: var(--ink-300);
+  stroke-width: 1;
+  opacity: 0.4;
+}
+
+/* 2px jade, and NO area fill under it — ever. */
+.pp-trend__line {
+  fill: none;
+  stroke: var(--jade-500);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.pp-trend__dot {
+  fill: var(--jade-500);
+  transition: r var(--t-quick) var(--ease-out);
+}
+
+.pp-trend__dot--hover { fill: var(--jade-deep); stroke: var(--jade-500); stroke-width: 2; }
+
+/* Micro, ink-400, no axis lines — the ticks are implied by the labels. */
+.pp-trend__tick {
+  fill: var(--ink-400);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+/* Drawn once, left to right, over --t-scene. Keyed to the element, so a
+   re-render with the same data does not replay it. */
+.pp-trend__reveal {
+  transform-origin: left center;
+  animation: pp-reveal var(--t-scene) var(--ease-out) both;
+}
+
+@keyframes pp-reveal {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pp-trend__reveal { animation: none; }
+}
+
+.pp-trend__caption { margin: 0; color: var(--ink-400); }
+.pp-trend__caption strong { color: var(--ink-900); font-weight: 500; }
+
+/* The trend's axis starts near the data, not at zero, so the caption says so —
+   an unlabelled non-zero baseline is the oldest chart lie there is. */
+.pp-trend__axisnote { color: var(--ink-300); }

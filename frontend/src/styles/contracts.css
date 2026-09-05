@@ -1,0 +1,311 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   P6 · CONTRACTS AND SCHEDULES
+   S4 (the contract list) and S5 (the working-schedule editor).
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── S4 · the active marker ───────────────────────────────────────────────
+   §12 S4: the applicable contract gets a cobalt left marker. It is a real
+   element inside the first cell rather than a border on the row, because a
+   virtualised row's border goes away with the row and this must not.      */
+
+.pp-ct__who {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.pp-ct__marker {
+  flex: none;
+  width: 3px;
+  height: 20px;
+  border-radius: var(--r-full);
+  background: transparent;
+  transition: background var(--t-base) var(--ease-out);
+}
+
+.pp-ct__marker--active { background: var(--cobalt-500); }
+
+/* "TODAY" — the answer to *which contract would payroll use*, which is not
+   the same claim as the state chip beside it. */
+.pp-ct__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--s-2);
+  height: 18px;
+  border-radius: var(--r-full);
+  background: var(--cobalt-tint);
+  color: var(--cobalt-deep);
+  letter-spacing: 0.08em;
+}
+
+/* The applicable row sits very slightly proud of the well — §12 S4's
+   "slightly raised ground". A full clay-1 here would fight the table. */
+.pp-table tr:has(.pp-ct__marker--active) {
+  background: var(--bone-200);
+}
+
+/* ── The contract drawer ──────────────────────────────────────────────── */
+
+.pp-ct__hero {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+}
+
+.pp-ct__derived {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-top: var(--s-2);
+}
+
+/* ── The schedule list ────────────────────────────────────────────────── */
+
+.pp-sched__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--s-4);
+}
+
+.pp-sched__cardhead {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  margin-bottom: var(--s-4);
+}
+
+.pp-sched__night {
+  margin-left: auto;
+  padding: 0 var(--s-2);
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--r-full);
+  background: var(--cobalt-tint);
+  color: var(--cobalt-deep);
+  letter-spacing: 0.08em;
+}
+
+/* The week as a glyph: seven marks, the worked ones carrying their hours as
+   height, so two schedules are comparable by shape before they are read. */
+.pp-sched__glyph {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  align-items: end;
+  gap: var(--s-2);
+  height: 64px;
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--bone-300);
+  box-shadow: var(--inset-1);
+}
+
+.pp-sched__glyph-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--s-1);
+  height: 100%;
+}
+
+.pp-sched__glyph-bar {
+  width: 100%;
+  border-radius: var(--r-xs);
+  background: var(--bone-400);
+}
+
+.pp-sched__glyph-bar--on {
+  background: var(--cobalt-500);
+  box-shadow: var(--clay-1);
+}
+
+.pp-sched__glyph-label { color: var(--ink-400); }
+
+.pp-sched__cardfoot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  margin-top: var(--s-4);
+}
+
+/* ── S5 · the editor ──────────────────────────────────────────────────── */
+
+.pp-sched__editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: var(--s-6);
+  align-items: start;
+}
+
+@media (max-width: 1080px) {
+  .pp-sched__editor { grid-template-columns: minmax(0, 1fr); }
+}
+
+.pp-week {
+  display: grid;
+  gap: var(--s-3);
+  margin-top: var(--s-5);
+}
+
+/* One day. The well is inset — the day is a slot milled into the week. */
+.pp-day {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  grid-template-areas:
+    "toggle well"
+    "times  times";
+  gap: var(--s-3);
+  align-items: center;
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--bone-300);
+  box-shadow: var(--inset-1);
+  transition: box-shadow var(--t-base) var(--ease-out), opacity var(--t-base) var(--ease-out);
+}
+
+@media (min-width: 861px) {
+  .pp-day {
+    grid-template-columns: 116px minmax(0, 1fr) auto;
+    grid-template-areas: "toggle well times";
+  }
+}
+
+.pp-day--off { opacity: 0.72; }
+.pp-day--invalid { box-shadow: var(--inset-1), 0 0 0 2px var(--vermilion-500); }
+
+.pp-day__toggle {
+  grid-area: toggle;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  cursor: pointer;
+}
+
+.pp-day__toggle input { accent-color: var(--cobalt-500); width: 16px; height: 16px; }
+.pp-day__name { color: var(--ink-900); }
+
+/* The slot the shift sits in. */
+.pp-day__well {
+  grid-area: well;
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 34px;
+  padding: 0 var(--s-2);
+  border-radius: var(--r-md);
+  background: var(--bone-400);
+  box-shadow: var(--inset-2);
+}
+
+/* THE BLOCK. Width is hours — this is the whole screen. Raised clay so it
+   reads as a physical thing set into the slot, not a progress bar. */
+.pp-day__block {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 40px;
+  height: 22px;
+  padding: 0 var(--s-2);
+  border-radius: var(--r-sm);
+  background: var(--bone-50);
+  box-shadow: var(--clay-1);
+  color: var(--ink-700);
+  transition: width var(--t-base) var(--ease-out), background var(--t-base) var(--ease-out);
+}
+
+/* A night shift is the one case where the block means something extra, so it
+   takes the accent that everything "in force" takes elsewhere. */
+.pp-day__block--night {
+  background: var(--cobalt-500);
+  color: var(--on-solid);
+}
+
+.pp-day__hours { font-variant-numeric: tabular-nums; }
+
+.pp-day__rest {
+  color: var(--ink-400);
+  letter-spacing: 0.08em;
+}
+
+.pp-day__times {
+  grid-area: times;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--s-3);
+}
+
+.pp-day__times .pp-field { width: 128px; }
+.pp-day__times .pp-field:last-of-type { width: 92px; }
+
+.pp-day__clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-bottom: var(--s-1);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--ink-400);
+  cursor: pointer;
+  transition: color var(--t-base) var(--ease-out), background var(--t-base) var(--ease-out);
+}
+
+.pp-day__clear:hover { color: var(--vermilion-500); background: var(--vermilion-tint); }
+
+.pp-day__hint { grid-area: times; color: var(--ink-400); margin: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pp-day__block { transition: none; }
+}
+
+/* ── The readout ──────────────────────────────────────────────────────── */
+
+.pp-week__readout {
+  position: sticky;
+  top: var(--s-5);
+  display: grid;
+  gap: var(--s-4);
+  padding: var(--s-5);
+  border-radius: var(--r-xl);
+  background: var(--bone-100);
+  box-shadow: var(--clay-3);
+}
+
+.pp-week__figure { display: grid; gap: var(--s-1); }
+
+.pp-week__derivedby {
+  margin: 0;
+  color: var(--ink-400);
+  max-width: 32ch;
+}
+
+.pp-week__stats {
+  display: grid;
+  gap: var(--s-3);
+  margin: 0;
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--bone-600);
+}
+
+.pp-week__stats div { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-3); }
+.pp-week__stats dt { color: var(--ink-400); letter-spacing: 0.08em; }
+.pp-week__stats dd { margin: 0; font-variant-numeric: tabular-nums; }
+
+.pp-week__night {
+  display: flex;
+  gap: var(--s-2);
+  align-items: flex-start;
+  margin: 0;
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--cobalt-tint);
+  color: var(--cobalt-deep);
+}

@@ -1,0 +1,537 @@
+/* ============================================================================
+   P4 · THE SIGNATURE SYSTEMS · blueprint §10
+   Four things people remember. Every value they use lives here, because a px
+   or a hex written inside a component is a decision made outside the system.
+   ========================================================================= */
+
+/* ---------------------------------------------------------------------------
+   §07.4 · ROLLING NUMERALS
+   Digits move like an odometer, and only the ones that changed move.
+
+   The slot needs three boxes, and each earns its place:
+     · `__ghost`  invisible, real text — it establishes the width AND the
+                  baseline. Without it the window would be an overflow:hidden
+                  inline-block, whose baseline is its bottom edge, and every
+                  figure would sit a fifth of an em too high next to its own
+                  currency mark.
+     · `__window` the clip.
+     · `__col`    the strip of ten digits that slides.
+   ------------------------------------------------------------------------- */
+
+.pp-roll {
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap;
+  /* The flash is a colour change, which is a duration, not a spring (§07.1). */
+  transition: color var(--t-slow) var(--ease-out);
+  color: var(--ink-900);
+}
+
+.pp-roll--rising  { color: var(--jade-500); }
+.pp-roll--falling { color: var(--vermilion-500); }
+
+/* A negative figure is vermilion for as long as it is negative (§05.3 rule 5),
+   which outranks the transient flash. */
+.pp-roll--negative,
+.pp-roll--negative.pp-roll--rising,
+.pp-roll--negative.pp-roll--falling { color: var(--vermilion-500); }
+
+.pp-roll__slot {
+  position: relative;
+  display: inline-block;
+  line-height: 1;
+}
+
+.pp-roll__ghost { visibility: hidden; }
+
+.pp-roll__window {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.pp-roll__col {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  will-change: transform;
+}
+
+.pp-roll__col > span {
+  display: block;
+  height: 1em;
+  line-height: 1;
+}
+
+/* ---------------------------------------------------------------------------
+   §10.1 · THE LINE
+   An inset channel milled into the ground, with the person on it.
+   ------------------------------------------------------------------------- */
+
+.pp-line {
+  position: relative;
+  width: 100%;
+  /* Room for an overtime tick above the track and the day ticks below it. */
+  padding: var(--s-5) 0 var(--s-4);
+  touch-action: none;      /* the bead is dragged, the page must not pan */
+  user-select: none;
+}
+
+/*
+ * The bead is absolutely positioned in SVG coordinates, so its containing
+ * block has to be the element the SVG fills — not `.pp-line`, whose padding
+ * would offset it by 24px and park it in the contract-band row.
+ */
+.pp-line__track { position: relative; }
+
+.pp-line__svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+
+/* The track is a channel, so it takes the inset treatment: a dark floor with a
+   white lip below it. In SVG that is two rects, not a box-shadow. */
+.pp-line__floor  { fill: var(--bone-400); }
+.pp-line__lip    { fill: var(--bone-50); opacity: 0.7; }
+
+.pp-line__band          { fill: var(--bone-500); }
+.pp-line__band--active  { fill: var(--cobalt-500); }
+.pp-line__band--future  { fill: var(--bone-500); opacity: 0.45; }
+
+.pp-line__tick           { stroke: var(--ink-400); stroke-width: 2; }
+.pp-line__tick--overtime { stroke: var(--orange-500); }
+.pp-line__tick--missing  { stroke: var(--vermilion-500); }
+.pp-line__tick--holiday  { stroke: var(--bone-700); }
+
+.pp-line__boundary {
+  stroke: var(--ink-700);
+  stroke-width: 1;
+  opacity: 0.55;
+}
+
+.pp-line__boundary-label {
+  fill: var(--ink-400);
+  font-size: 10px;
+  font-weight: 550;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+/* The bead is raised clay, so it is an HTML element sitting over the SVG —
+   `--clay-1` is a box-shadow and SVG has no such thing. */
+.pp-line__bead {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: var(--r-full);
+  background: var(--bone-50);
+  box-shadow: var(--clay-1);
+  border: 0;
+  padding: 0;
+  cursor: grab;
+  transform: translate(-50%, -50%);
+  /* §07.2 — direct manipulation tracks the cursor with no easing at all. */
+  transition: none;
+}
+
+.pp-line__bead:active { cursor: grabbing; box-shadow: var(--clay-pressed); }
+.pp-line__bead:focus-visible { outline: 2px solid var(--cobalt-500); outline-offset: 3px; }
+
+.pp-line__caption {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-4);
+  margin-top: var(--s-2);
+}
+
+.pp-line__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-4);
+  margin-top: var(--s-3);
+}
+
+.pp-line__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.pp-line__swatch { width: 10px; height: 10px; border-radius: var(--r-xs); }
+.pp-line__swatch--gap {
+  background: transparent;
+  border: 1px dashed var(--bone-800);
+}
+
+/* ---------------------------------------------------------------------------
+   §10.2 · THE STACK
+   Blocks are raised clay and sized to their amount, so the picture is the data.
+   ------------------------------------------------------------------------- */
+
+.pp-stack {
+  display: grid;
+  /* The tower has a fixed drawing height, so its column is sized to it rather
+     than to a fraction — a 1fr column on a wide screen scales the whole SVG up
+     with it and produces a four-hundred-pixel BASIC block. */
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s-7);
+  align-items: start;
+}
+
+.pp-stack__figure { position: relative; }
+
+/* Height drives; width follows the viewBox ratio. */
+.pp-stack__svg {
+  display: block;
+  height: 420px;
+  width: auto;
+  max-width: 100%;
+  overflow: visible;
+}
+
+@media (max-width: 720px) {
+  .pp-stack { grid-template-columns: minmax(0, 1fr); }
+}
+
+.pp-stack__block {
+  fill: var(--bone-100);
+  stroke: var(--bone-600);
+  stroke-width: 1;
+  cursor: pointer;
+}
+
+.pp-stack__block:hover      { fill: var(--bone-50); }
+.pp-stack__block--active    { fill: var(--bone-50); stroke: var(--cobalt-500); }
+.pp-stack__block:focus-visible { outline: none; stroke: var(--cobalt-500); stroke-width: 2; }
+
+/* A block's own top highlight and bottom shade — the light model, in SVG. */
+.pp-stack__hl { stroke: var(--bone-50); stroke-width: 1.5; opacity: 0.9; }
+.pp-stack__sh { stroke: var(--bone-700); stroke-width: 1.5; opacity: 0.5; }
+
+/* Carved, not stacked: the notch is a recess, so it reads as removed material
+   rather than another block. */
+.pp-stack__carve {
+  fill: var(--bone-300);
+  stroke: var(--bone-700);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  cursor: pointer;
+}
+
+.pp-stack__carve:hover { fill: var(--bone-400); }
+.pp-stack__carve--active { stroke: var(--vermilion-500); stroke-dasharray: none; }
+
+.pp-stack__ground { stroke: var(--bone-800); stroke-width: 1; }
+
+.pp-stack__rule {
+  stroke: var(--ink-700);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  opacity: 0.7;
+}
+
+.pp-stack__measure { stroke: var(--ink-400); stroke-width: 1; }
+
+.pp-stack__label {
+  fill: var(--ink-400);
+  font-size: 10px;
+  font-weight: 550;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.pp-stack__block-label {
+  fill: var(--ink-900);
+  font-size: 11px;
+  font-weight: 550;
+  letter-spacing: 0.06em;
+  pointer-events: none;
+}
+
+.pp-stack__amount {
+  fill: var(--ink-500);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+/* The inspector beside the tower — code, sequence, formula, inputs. */
+.pp-stack__inspect {
+  align-self: start;
+  position: sticky;
+  top: var(--s-4);
+}
+
+.pp-stack__formula {
+  display: block;
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--bone-300);
+  box-shadow: var(--inset-1);
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.pp-stack__inputs {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s-1) var(--s-4);
+  margin: var(--s-3) 0 0;
+}
+
+.pp-stack__inputs dt { color: var(--ink-400); }
+.pp-stack__inputs dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ---------------------------------------------------------------------------
+   §10.3 · THE PROVENANCE DRAWER
+   Every step is openable until you reach a record a human created.
+   ------------------------------------------------------------------------- */
+
+.pp-prov__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  padding-bottom: var(--s-4);
+  border-bottom: 1px solid var(--bone-600);
+  margin-bottom: var(--s-4);
+}
+
+.pp-prov__tree { list-style: none; margin: 0; padding: 0; }
+
+/* The tree rules are drawn with borders rather than characters, so they scale
+   with the type and never break under a screen reader. */
+.pp-prov__branch {
+  position: relative;
+  padding-left: var(--s-5);
+  border-left: 1px solid var(--bone-600);
+  margin-left: var(--s-3);
+}
+
+.pp-prov__branch--last { border-left-color: transparent; }
+
+.pp-prov__elbow {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--s-4);
+  height: 18px;
+  border-left: 1px solid var(--bone-600);
+  border-bottom: 1px solid var(--bone-600);
+  border-bottom-left-radius: var(--r-xs);
+}
+
+.pp-prov__row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  padding: var(--s-2) var(--s-3);
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--t-instant) linear;
+}
+
+.pp-prov__row:hover { background: var(--bone-300); }
+.pp-prov__row:focus-visible { outline: 2px solid var(--cobalt-500); outline-offset: -2px; }
+.pp-prov__row[aria-expanded="true"] { background: var(--bone-300); }
+
+.pp-prov__caret {
+  flex: none;
+  color: var(--ink-400);
+  transition: transform var(--t-quick) var(--ease-out);
+}
+
+.pp-prov__caret--open { transform: rotate(90deg); }
+
+.pp-prov__name { flex: 1; min-width: 0; }
+
+.pp-prov__seq {
+  flex: none;
+  color: var(--ink-400);
+  font-variant-numeric: tabular-nums;
+}
+
+.pp-prov__amount { flex: none; font-variant-numeric: tabular-nums; }
+
+.pp-prov__detail {
+  padding: var(--s-3) var(--s-3) var(--s-4) var(--s-6);
+  display: grid;
+  gap: var(--s-3);
+}
+
+.pp-prov__eq {
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--bone-300);
+  box-shadow: var(--inset-1);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.pp-prov__inputs {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s-1) var(--s-4);
+  margin: 0;
+}
+
+.pp-prov__inputs dt { color: var(--ink-400); }
+.pp-prov__inputs dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* The end of the chain: a record a human created. It is a different material
+   on purpose — you have left the arithmetic. */
+.pp-prov__source {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--bone-100);
+  box-shadow: var(--clay-1);
+  color: var(--ink-900);
+  text-decoration: none;
+  transition: box-shadow var(--t-quick) var(--ease-out);
+}
+
+.pp-prov__source:hover { box-shadow: var(--clay-2); }
+.pp-prov__source:focus-visible { outline: 2px solid var(--cobalt-500); outline-offset: 3px; }
+.pp-prov__source-kind { color: var(--ink-400); }
+
+/* ---------------------------------------------------------------------------
+   §10.4 · THE PAYSLIP — a physical object that flips
+   ------------------------------------------------------------------------- */
+
+.pp-payslip {
+  position: relative;
+  perspective: 1600px;
+  width: 100%;
+  max-width: 460px;
+}
+
+.pp-payslip__inner {
+  position: relative;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.pp-payslip__face {
+  border-radius: var(--r-xl);
+  background: var(--bone-100);
+  box-shadow: var(--clay-3);
+  padding: var(--s-6);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* The back occupies the same box as the front — absolutely, so the card has
+   one height and does not jump mid-flip. */
+.pp-payslip__face--back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+  overflow: auto;
+}
+
+/* The cast shadow is its own element so it can track the rotation. A card
+   whose shadow does not move under it reads as a CSS transform; one whose
+   shadow does reads as an object. */
+.pp-payslip__shadow {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: -18px;
+  height: 26px;
+  border-radius: var(--r-full);
+  background: var(--clay-sh);
+  filter: blur(12px);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.pp-payslip__rule {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--s-4);
+  padding: var(--s-2) 0;
+}
+
+.pp-payslip__rule--total {
+  border-top: 1px solid var(--bone-600);
+  margin-top: var(--s-2);
+  padding-top: var(--s-3);
+}
+
+.pp-payslip__group { margin-top: var(--s-4); }
+
+.pp-payslip__net {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-4);
+  margin-top: var(--s-5);
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--bone-300);
+  box-shadow: var(--inset-2);
+}
+
+.pp-payslip__perf {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: repeating-linear-gradient(
+    to right,
+    var(--bone-600) 0 6px,
+    transparent 6px 12px
+  );
+}
+
+/* ---------------------------------------------------------------------------
+   §07.5 · REDUCED MOTION
+   The meaning survives even when the motion does not.
+   ------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .pp-roll,
+  .pp-prov__caret,
+  .pp-prov__row,
+  .pp-prov__source,
+  .pp-payslip__inner {
+    transition-duration: 120ms !important;
+  }
+}
+
+/* A payslip line that opens (§10.3). It is a real button when the page gives
+   it a handler, so the keyboard reaches it without any extra machinery. */
+.pp-payslip__rule--open {
+  width: 100%;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--t-instant) linear;
+}
+
+.pp-payslip__rule--open:hover { background: var(--bone-200); }
+
+/* §4.9's RULE_EVAL_FAILED: the line prints at zero and says why. A missing
+   line would be indistinguishable from a rule that was never configured. */
+.pp-payslip__rule--failed { background: var(--orange-tint); }
+
+.pp-payslip__failed {
+  margin-left: var(--s-2);
+  padding: 0 var(--s-2);
+  border-radius: var(--r-full);
+  background: var(--orange-solid);
+  color: var(--on-solid);
+  letter-spacing: 0.06em;
+}

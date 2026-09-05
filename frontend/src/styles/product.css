@@ -1,0 +1,120 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   STAGE III · THE PIECES EVERY FEATURE SHARES
+
+   Two components used by more than one phase, and the dark room. Anything
+   that belongs to a single screen lives in that phase's own stylesheet.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Section navigation ───────────────────────────────────────────────────
+   The sidebar has six items and must keep having six (§11), so a section
+   with several screens navigates itself — same material, one level down:
+   flush links, and the current one is a raised clay key.                   */
+
+.pp-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-bottom: var(--s-5);
+}
+
+.pp-subnav__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-4);
+  border-radius: var(--r-sm);
+  font: 400 13px/1 var(--font-sans);
+  letter-spacing: 0.01em;
+  color: var(--ink-500);
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    box-shadow var(--t-base) var(--ease-out),
+    color var(--t-base) var(--ease-out),
+    background var(--t-instant) linear;
+}
+
+.pp-subnav__item:hover { color: var(--ink-900); }
+
+.pp-subnav__item--active {
+  background: var(--bone-50);
+  box-shadow: var(--clay-1);
+  color: var(--ink-900);
+}
+
+.pp-subnav__count {
+  color: var(--ink-400);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── THE LINE, one row high ───────────────────────────────────────────────
+   Same track geometry and the same colours as §10.1, at table scale. The
+   track is the window; the fill is the range.                             */
+
+.pp-seg-line {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 72px;
+  height: 12px;
+}
+
+.pp-seg-line__track {
+  position: absolute;
+  inset-inline: 0;
+  top: 5px;
+  height: 3px;
+  border-radius: var(--r-full);
+  background: var(--bone-400);
+}
+
+.pp-seg-line__fill {
+  position: absolute;
+  top: 3px;
+  height: 7px;
+  border-radius: var(--r-full);
+  background: var(--ink-300);
+  transition: background var(--t-base) var(--ease-out);
+}
+
+.pp-seg-line__fill--active { background: var(--cobalt-500); }
+.pp-seg-line__fill--short  { background: var(--orange-500); }
+
+/* Open-ended: the right end loses its cap and fades, which is how the
+   drawing says "and onward" without needing a caption. */
+.pp-seg-line__fill--open {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+  -webkit-mask-image: linear-gradient(to right, #000 82%, transparent 100%);
+  mask-image: linear-gradient(to right, #000 82%, transparent 100%);
+}
+
+/* ── THE DARK ROOM · §04.4 ────────────────────────────────────────────────
+   The payrun — the one place money actually moves — inverts. It is not a
+   second palette: it is the *same* dark ramp the global theme uses, applied
+   to a subtree. Anything else and the two would drift, and the product
+   would have two different darks.
+
+   `tokens.css` declares the ramp against `[data-theme="dark"]`; this makes
+   `[data-room="dark"]` a second, equal selector for it.                   */
+
+[data-room="dark"] {
+  color-scheme: dark;
+  background: var(--bone-200);
+  color: var(--ink-900);
+}
+
+/* The room is entered and left deliberately (§P10): the ground changes
+   under a transition slow enough to read as walking into another room. */
+.pp-room {
+  border-radius: var(--r-xl);
+  padding: var(--s-6);
+  margin: calc(var(--s-2) * -1) 0 0;
+  transition:
+    background var(--t-scene) var(--ease-in-out),
+    color var(--t-scene) var(--ease-in-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pp-room { transition: none; }
+}

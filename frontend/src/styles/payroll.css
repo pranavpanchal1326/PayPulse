@@ -1,0 +1,747 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   P9 · P10 · P11 — PAYROLL
+   S12 structures · S13 rules · S14–S16 the dark room · S17 the payslip
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── S12 · structures ─────────────────────────────────────────────────── */
+
+.pp-struct__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--s-4);
+}
+
+.pp-struct__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-bottom: var(--s-4);
+}
+
+.pp-struct__code { margin: var(--s-1) 0 0; color: var(--ink-400); font-family: var(--font-mono); }
+
+/* THE STACK at glyph scale — shape, not amounts. */
+.pp-struct__glyph {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-start;
+  gap: 2px;
+  min-height: 72px;
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--bone-300);
+  box-shadow: var(--inset-1);
+}
+
+.pp-struct__band {
+  height: 6px;
+  border-radius: var(--r-xs);
+  background: var(--bone-500);
+}
+
+.pp-struct__band--basic { background: var(--cobalt-500); }
+
+/* Deductions carve: inset from both sides, so they read as removed material
+   rather than as one more block in a different colour (§10.2). */
+.pp-struct__band--carve {
+  align-self: center;
+  width: 62%;
+  background: var(--vermilion-500);
+  opacity: 0.55;
+}
+
+.pp-struct__glyph-empty {
+  margin: auto;
+  color: var(--ink-400);
+  text-align: center;
+  letter-spacing: 0.06em;
+}
+
+.pp-struct__counts {
+  display: flex;
+  gap: var(--s-5);
+  flex-wrap: wrap;
+  margin-top: var(--s-4);
+  color: var(--ink-400);
+}
+
+/* ── S13 · the split view ─────────────────────────────────────────────── */
+
+.pp-rules {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr) 320px;
+  gap: var(--s-5);
+  align-items: start;
+}
+
+@media (max-width: 1320px) {
+  .pp-rules { grid-template-columns: 260px minmax(0, 1fr); }
+  .pp-preview { grid-column: 1 / -1; }
+}
+
+@media (max-width: 900px) {
+  .pp-rules { grid-template-columns: minmax(0, 1fr); }
+}
+
+.pp-rules__list { position: sticky; top: var(--s-5); }
+
+.pp-rules__keys {
+  display: grid;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A raised key. The order it sits in IS the evaluation order. */
+.pp-rulekey {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--bone-50);
+  box-shadow: var(--clay-1);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    box-shadow var(--t-base) var(--ease-out),
+    transform var(--t-base) var(--ease-out),
+    opacity var(--t-base) var(--ease-out);
+}
+
+.pp-rulekey:hover { box-shadow: var(--clay-2-hover); transform: translateY(-1px); }
+.pp-rulekey--selected { box-shadow: var(--clay-2), 0 0 0 2px var(--cobalt-500); }
+
+/* Grabbed: lifted to clay-4, per §12 S13. */
+.pp-rulekey--held {
+  box-shadow: var(--clay-4);
+  transform: translateY(-3px);
+  background: var(--bone-100);
+}
+
+/* …and the others part to make room. */
+.pp-rulekey--parting { opacity: 0.62; transform: scale(0.99); }
+
+.pp-rulekey--inactive { opacity: 0.55; }
+.pp-rulekey--forward { box-shadow: var(--clay-1), 0 0 0 2px var(--vermilion-500); }
+
+.pp-rulekey__grip { color: var(--ink-300); cursor: grab; }
+.pp-rulekey--held .pp-rulekey__grip { cursor: grabbing; }
+
+.pp-rulekey__seq {
+  min-width: 24px;
+  color: var(--ink-400);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.pp-rulekey__text { display: grid; min-width: 0; }
+.pp-rulekey__code { font-family: var(--font-mono); letter-spacing: 0.02em; }
+.pp-rulekey__name {
+  color: var(--ink-500);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The other half of the forward-reference sentence lives in the editor pane;
+   this is the half attached to the fix, which is a reorder. */
+.pp-rules__forward {
+  margin: var(--s-2) 0 var(--s-2) var(--s-4);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-sm);
+  background: var(--vermilion-tint);
+  color: var(--vermilion-deep);
+}
+
+.pp-rules__forward code { font-family: var(--font-mono); }
+
+.pp-rules__editor {
+  display: grid;
+  gap: var(--s-4);
+  padding: var(--s-5);
+  border-radius: var(--r-xl);
+  background: var(--bone-100);
+  box-shadow: var(--clay-3);
+}
+
+.pp-rules__editorhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.pp-rules__formula textarea,
+.pp-rules__formula .pp-input {
+  font-family: var(--font-mono);
+  line-height: 1.6;
+}
+
+.pp-rules__testrow { display: flex; gap: var(--s-2); flex-wrap: wrap; }
+
+.pp-rules__actions {
+  display: flex;
+  gap: var(--s-2);
+  justify-content: flex-end;
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--bone-600);
+}
+
+/* ── The sandbox result ───────────────────────────────────────────────── */
+
+.pp-sandbox { display: grid; gap: var(--s-3); padding: var(--s-4); }
+.pp-sandbox--invalid { box-shadow: var(--inset-1), 0 0 0 2px var(--vermilion-500); }
+.pp-sandbox__label { margin: 0; color: var(--ink-400); letter-spacing: 0.08em; }
+.pp-sandbox__error { margin: 0; color: var(--vermilion-500); }
+
+.pp-sandbox__ctx {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--s-2) var(--s-4);
+  margin: 0;
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--bone-600);
+}
+
+.pp-sandbox__ctx div { display: flex; justify-content: space-between; gap: var(--s-2); }
+.pp-sandbox__ctx dt { color: var(--ink-400); }
+.pp-sandbox__ctx dd { margin: 0; color: var(--ink-900); }
+
+/* ── The live preview ─────────────────────────────────────────────────── */
+
+.pp-preview {
+  position: sticky;
+  top: var(--s-5);
+  display: grid;
+  gap: var(--s-4);
+  padding: var(--s-5);
+  border-radius: var(--r-xl);
+  background: var(--bone-300);
+  box-shadow: var(--inset-2);
+  transition: opacity var(--t-base) var(--ease-out);
+}
+
+/* The stale frame dims rather than blanking — a flash per keystroke is worse
+   than a second of slightly older truth. */
+.pp-preview--computing { opacity: 0.62; }
+
+.pp-preview__head { display: grid; gap: var(--s-1); }
+.pp-preview__label { margin: 0; color: var(--ink-400); letter-spacing: 0.08em; }
+.pp-preview__sub { margin: 0; color: var(--ink-400); }
+
+.pp-preview__empty,
+.pp-chart__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+  border-radius: var(--r-md);
+  background: var(--bone-400);
+  box-shadow: var(--inset-1);
+}
+
+.pp-preview__empty p,
+.pp-chart__empty p {
+  margin: 0;
+  color: var(--ink-400);
+  letter-spacing: 0.08em;
+}
+
+.pp-preview__editing { margin: 0; color: var(--ink-500); }
+.pp-preview__editing code { font-family: var(--font-mono); color: var(--cobalt-500); }
+
+.pp-preview__notes { display: grid; gap: var(--s-2); }
+
+.pp-preview__fail {
+  display: flex;
+  gap: var(--s-2);
+  align-items: flex-start;
+  margin: 0;
+  padding: var(--s-3);
+  border-radius: var(--r-sm);
+  background: var(--orange-tint);
+  color: var(--orange-deep);
+}
+
+.pp-preview__skipped { margin: 0; color: var(--ink-400); }
+.pp-preview__skipped code { margin-right: var(--s-1); }
+
+.pp-preview__totals {
+  display: grid;
+  gap: var(--s-2);
+  margin: 0;
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--bone-600);
+}
+
+.pp-preview__totals div { display: flex; justify-content: space-between; gap: var(--s-3); }
+.pp-preview__totals dt { color: var(--ink-400); letter-spacing: 0.08em; }
+.pp-preview__totals dd { margin: 0; color: var(--ink-900); }
+
+/* ── The payrun list ──────────────────────────────────────────────────── */
+
+.pp-open { display: grid; gap: var(--s-4); margin-bottom: var(--s-6); }
+
+.pp-open__card { display: grid; gap: var(--s-5); padding: var(--s-6); }
+
+.pp-open__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+}
+
+.pp-open__period { margin: 0 0 var(--s-2); color: var(--cobalt-500); letter-spacing: 0.1em; }
+
+.pp-open__figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--s-4);
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--bone-300);
+  box-shadow: var(--inset-1);
+}
+
+.pp-open__figure { display: grid; gap: var(--s-1); }
+.pp-open__figure p { margin: 0; color: var(--ink-400); letter-spacing: 0.08em; }
+
+.pp-open__cta {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0;
+  color: var(--cobalt-500);
+}
+
+/* ── S14 · S15 · the wizard ───────────────────────────────────────────── */
+
+.pp-wiz__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--s-4);
+  margin-bottom: var(--s-5);
+}
+
+.pp-wiz__quick { display: grid; gap: var(--s-2); align-content: end; }
+.pp-wiz__quick .t-micro { color: var(--ink-400); letter-spacing: 0.08em; }
+
+.pp-wiz__well { padding: var(--s-6); min-height: 180px; }
+
+.pp-wiz__summary {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  gap: var(--s-6);
+  align-items: center;
+}
+
+@media (max-width: 720px) {
+  .pp-wiz__summary { grid-template-columns: 1fr 1fr; }
+  .pp-wiz__summarytext { grid-column: 1 / -1; }
+}
+
+.pp-wiz__count { display: grid; gap: var(--s-1); justify-items: start; }
+.pp-wiz__count p { margin: 0; color: var(--ink-400); letter-spacing: 0.1em; }
+.pp-wiz__summarytext { margin: 0; color: var(--ink-500); max-width: 46ch; }
+
+/* The spec's own requirement, stated in the interface. Flush, quiet, and
+   directly under the well it describes. */
+.pp-wiz__notpersisted {
+  margin: var(--s-3) 0 0;
+  color: var(--cobalt-500);
+  letter-spacing: 0.14em;
+}
+
+.pp-wiz__notpersisted-why {
+  margin: var(--s-2) 0 0;
+  color: var(--ink-400);
+  max-width: 64ch;
+}
+
+.pp-wiz__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-2);
+  margin-top: var(--s-6);
+}
+
+.pp-wiz__hint { margin: 0; color: var(--ink-400); }
+.pp-wiz__name { max-width: 420px; margin-bottom: var(--s-4); }
+
+.pp-wiz__selecthead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--s-3);
+}
+
+.pp-wiz__selecthead p { margin: 0; }
+
+.pp-wiz__list { padding: var(--s-2); max-height: 520px; overflow: auto; }
+
+/* One eligible row. */
+.pp-elig {
+  display: grid;
+  grid-template-columns: auto minmax(140px, 1.4fr) 140px 110px minmax(0, 1.6fr);
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: background var(--t-instant) linear;
+}
+
+@media (max-width: 900px) {
+  .pp-elig {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: "check who" ". days" ". wage" ". notes";
+  }
+  .pp-elig__who { grid-area: who; }
+  .pp-elig__days { grid-area: days; }
+  .pp-elig__wage { grid-area: wage; }
+  .pp-elig__notes { grid-area: notes; }
+}
+
+.pp-elig:hover { background: var(--bone-200); }
+.pp-elig input { accent-color: var(--cobalt-500); width: 16px; height: 16px; }
+
+/* Blocked rows drop to 55% and keep their reason — §12 S15. */
+.pp-elig--blocked { opacity: 0.55; cursor: not-allowed; }
+
+.pp-elig__who { display: grid; min-width: 0; }
+.pp-elig__who .t-ui-sm { color: var(--ink-400); }
+
+.pp-elig__days { display: grid; gap: var(--s-1); }
+.pp-elig__days .t-micro { color: var(--ink-400); font-variant-numeric: tabular-nums; }
+.pp-elig__prorated { color: var(--orange-500); }
+
+.pp-elig__wage { text-align: right; font-variant-numeric: tabular-nums; }
+
+.pp-elig__notes { display: grid; gap: var(--s-1); }
+.pp-elig__blocker { color: var(--vermilion-500); }
+.pp-elig__note { color: var(--ink-400); }
+
+/* ── S16 · the cockpit ────────────────────────────────────────────────── */
+
+.pp-rail { margin-bottom: var(--s-5); }
+
+.pp-rail__track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pp-rail__stage {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--bone-300);
+  box-shadow: var(--inset-1);
+  color: var(--ink-400);
+  transition:
+    background var(--t-base) var(--ease-out),
+    box-shadow var(--t-base) var(--ease-out),
+    color var(--t-base) var(--ease-out);
+}
+
+.pp-rail__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border-radius: var(--r-full);
+  background: var(--bone-400);
+  color: var(--ink-400);
+  font: 400 11px/1 var(--font-mono);
+}
+
+.pp-rail__label { letter-spacing: 0.1em; }
+
+/* Completed stages fill jade and rise — they are objects now, not slots. */
+.pp-rail__stage--done {
+  background: var(--jade-solid);
+  box-shadow: var(--clay-1);
+  color: var(--on-solid);
+}
+.pp-rail__stage--done .pp-rail__mark {
+  background: var(--on-solid);
+  color: var(--jade-solid);
+}
+
+/* The current stage glows cobalt. */
+.pp-rail__stage--current {
+  background: var(--bone-50);
+  box-shadow: var(--clay-2), 0 0 0 2px var(--cobalt-500);
+  color: var(--ink-900);
+}
+.pp-rail__stage--current .pp-rail__mark { background: var(--cobalt-500); color: var(--on-solid); }
+
+/* Stuck: the same stage, in the colour of a thing that has stopped. */
+.pp-rail__stage--blocked {
+  box-shadow: var(--clay-2), 0 0 0 2px var(--vermilion-500);
+}
+.pp-rail__stage--blocked .pp-rail__mark { background: var(--vermilion-500); color: var(--on-solid); }
+
+/* THE SWEEP — vermilion to jade, left to right, 900ms (§12 S16). */
+.pp-rail__track--sweeping .pp-rail__stage {
+  animation: pp-sweep 900ms var(--ease-out) both;
+  animation-delay: var(--sweep-delay);
+}
+
+@keyframes pp-sweep {
+  0%   { background: var(--vermilion-500); color: var(--on-solid); transform: translateY(0); }
+  45%  { background: var(--vermilion-500); color: var(--on-solid); transform: translateY(-3px); }
+  100% { background: var(--jade-solid); color: var(--on-solid); transform: translateY(0); }
+}
+
+/* §07.5 — the meaning survives, the movement does not. */
+@media (prefers-reduced-motion: reduce) {
+  .pp-rail__track--sweeping .pp-rail__stage {
+    animation: none;
+    background: var(--jade-solid);
+    color: var(--on-solid);
+  }
+}
+
+.pp-rail__caption { margin: var(--s-3) 0 0; color: var(--ink-500); }
+
+.pp-cock__totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--s-4);
+  padding: var(--s-5);
+  margin-bottom: var(--s-5);
+  border-radius: var(--r-xl);
+  background: var(--bone-300);
+  box-shadow: var(--inset-2);
+}
+
+.pp-cock__total { display: grid; gap: var(--s-1); }
+.pp-cock__total p { margin: 0; color: var(--ink-400); letter-spacing: 0.08em; }
+
+.pp-cock__keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  margin-bottom: var(--s-5);
+}
+
+.pp-cock__final {
+  margin: 0 0 var(--s-5);
+  padding: var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--jade-tint);
+  color: var(--jade-deep);
+  max-width: 72ch;
+}
+
+.pp-cock__body {
+  display: grid;
+  grid-template-columns: 380px minmax(0, 1fr);
+  gap: var(--s-5);
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .pp-cock__body { grid-template-columns: minmax(0, 1fr); }
+}
+
+.pp-cock__blockers {
+  margin: 0 0 var(--s-4);
+  padding-left: var(--s-5);
+  color: var(--ink-500);
+}
+
+.pp-cock__days { display: grid; gap: var(--s-1); min-width: 84px; }
+.pp-cock__days .t-micro { color: var(--ink-400); font-variant-numeric: tabular-nums; }
+
+.pp-cock__flags { display: inline-flex; gap: var(--s-1); align-items: center; flex-wrap: wrap; }
+
+/* ── The triage inbox ─────────────────────────────────────────────────── */
+
+.pp-inbox {
+  display: grid;
+  gap: var(--s-3);
+  position: sticky;
+  top: var(--s-5);
+}
+
+.pp-inbox__head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+
+.pp-inbox__counts { display: flex; gap: var(--s-3); flex-wrap: wrap; }
+
+.pp-inbox__count {
+  font: 400 11px/1 var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-400);
+}
+
+.pp-inbox__count--error { color: var(--vermilion-500); }
+.pp-inbox__count--warning { color: var(--orange-500); }
+
+.pp-inbox__list {
+  display: grid;
+  gap: var(--s-3);
+  max-height: 620px;
+  overflow-y: auto;
+  padding-right: var(--s-1);
+}
+
+/* ── S17 · the payslip ────────────────────────────────────────────────── */
+
+/* The card centred on a flush field, the tower in the margin beside it. */
+.pp-slip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--s-6);
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .pp-slip { grid-template-columns: minmax(0, 1fr); }
+}
+
+.pp-slip__card { display: flex; justify-content: center; }
+
+.pp-slip__stack {
+  display: grid;
+  gap: var(--s-4);
+  position: sticky;
+  top: var(--s-5);
+  padding: var(--s-4);
+  border-radius: var(--r-xl);
+  background: var(--bone-300);
+  box-shadow: var(--inset-2);
+}
+
+.pp-slip__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-5);
+  flex-wrap: wrap;
+}
+
+.pp-slip__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin: var(--s-2) 0 0;
+  color: var(--ink-500);
+}
+
+.pp-slip__net {
+  display: grid;
+  gap: var(--s-1);
+  justify-items: end;
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-md);
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--t-base) var(--ease-out);
+}
+
+.pp-slip__net:hover { background: var(--bone-300); }
+.pp-slip__net .t-micro { color: var(--ink-400); letter-spacing: 0.08em; }
+
+.pp-slip__days {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: var(--s-3);
+  padding: var(--s-4);
+}
+
+.pp-slip__day { display: grid; gap: var(--s-1); }
+.pp-slip__day .t-micro { color: var(--ink-400); letter-spacing: 0.06em; }
+.pp-slip__day--warn { color: var(--orange-500); }
+
+.pp-slip__lines { padding: var(--s-5); display: grid; gap: var(--s-4); }
+
+.pp-slip__group {
+  margin: 0 0 var(--s-2);
+  color: var(--ink-400);
+  letter-spacing: 0.1em;
+}
+
+/* Every line opens. It is a button, so it is a button everywhere — keyboard
+   included. */
+.pp-slip__line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-4);
+  width: 100%;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-sm);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--t-instant) linear;
+}
+
+.pp-slip__line:hover { background: var(--bone-200); }
+.pp-slip__line--deduct .pp-slip__lineamount { color: var(--vermilion-500); }
+.pp-slip__line--failed { background: var(--orange-tint); }
+
+.pp-slip__linename { display: inline-flex; align-items: baseline; gap: var(--s-2); flex-wrap: wrap; }
+.pp-slip__linename .t-micro { color: var(--ink-400); }
+.pp-slip__lineamount { white-space: nowrap; }
+
+.pp-slip__totals {
+  display: grid;
+  gap: var(--s-1);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--bone-600);
+}
+
+.pp-slip__total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-4);
+  width: 100%;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-sm);
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--t-instant) linear;
+}
+
+.pp-slip__total:hover { background: var(--bone-200); }
+.pp-slip__total--strong { border-top: 1px solid var(--bone-600); margin-top: var(--s-2); padding-top: var(--s-3); }
+
+.pp-slip__foot { margin: 0; color: var(--ink-400); max-width: 70ch; }
+
+/* ── THE STACK, in a margin ───────────────────────────────────────────────
+   §10.2's drawing is a two-column composition — the tower beside the panel
+   that inspects it — and that is right on a wide surface. In the payslip's
+   right margin and in the rule editor's preview column it has ~320px, so the
+   two columns become two rows and the tower loses a little height. Same
+   proportions, same blocks, same carving: only the arrangement changes.    */
+
+.pp-stack--narrow { grid-template-columns: minmax(0, 1fr); gap: var(--s-4); }
+.pp-stack--narrow .pp-stack__svg { height: 340px; margin-inline: auto; }
+.pp-stack--narrow .pp-stack__inspect { min-width: 0; }

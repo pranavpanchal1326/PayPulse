@@ -1,0 +1,149 @@
+/* ============================================================================
+   PAYPULSE — THE MATERIAL SYSTEM
+   Three elevation states. PROUD = act. INSET = read. FLUSH = breathe.
+   One light source: upper-left, 35 degrees. If an element moves, its shadow
+   moves with it. See docs/DESIGN-BLUEPRINT.md §02–03.
+   ========================================================================= */
+
+/* --- PROUD ---------------------------------------------------------------
+   Raised. Catches light on its top edge. Buttons, keys, chips, cards.      */
+
+.clay-1,
+.clay-2,
+.clay-3,
+.clay-4 {
+  position: relative;
+  background: var(--bone-50);
+  border: none;
+  transition:
+    box-shadow var(--t-base) var(--ease-out),
+    transform  var(--t-base) var(--ease-out),
+    background var(--t-instant) linear;
+}
+
+.clay-1 { box-shadow: var(--clay-1); border-radius: var(--r-sm); }
+.clay-2 { box-shadow: var(--clay-2); border-radius: var(--r-md); }
+.clay-3 { box-shadow: var(--clay-3); border-radius: var(--r-lg); background: var(--bone-100); }
+.clay-4 { box-shadow: var(--clay-4); border-radius: var(--r-xl); background: var(--bone-100); }
+
+/* --- INSET ---------------------------------------------------------------
+   Milled into the material. Tables, fields, wells, the payslip body.       */
+
+.inset-1,
+.inset-2,
+.inset-3 {
+  position: relative;
+  background: var(--bone-300);
+  border: none;
+  transition: box-shadow var(--t-base) var(--ease-out);
+}
+
+.inset-1 { box-shadow: var(--inset-1); border-radius: var(--r-md); }
+.inset-2 { box-shadow: var(--inset-2); border-radius: var(--r-lg); }
+.inset-3 { box-shadow: var(--inset-3); border-radius: var(--r-lg); }
+
+/* --- FLUSH ---------------------------------------------------------------
+   Level with the ground. It has no class, because it has no material.
+   A screen with no flush area is exhausting.                              */
+
+/* --- INTERACTION ---------------------------------------------------------
+   The press is the most important interaction in the product. Highlight and
+   shade SWAP, and the element physically descends.                        */
+
+.pressable {
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transform: translateY(0);
+}
+
+.pressable.clay-2:hover:not(:disabled) {
+  box-shadow: var(--clay-2-hover);
+  transform: translateY(-1px);
+}
+.pressable.clay-3:hover:not(:disabled) {
+  box-shadow: var(--clay-3-hover);
+  transform: translateY(-2px);
+}
+
+.pressable.clay-1:active:not(:disabled),
+.pressable.clay-2:active:not(:disabled),
+.pressable.clay-3:active:not(:disabled),
+.pressable.clay-4:active:not(:disabled) {
+  box-shadow: var(--clay-pressed);
+  transform: translateY(2px);
+  /* the press outruns the release — it should feel immediate, then settle */
+  transition:
+    box-shadow var(--t-instant) var(--ease-out),
+    transform  var(--t-instant) var(--ease-out);
+}
+
+/* The ring sits OUTSIDE the clay and never replaces it. */
+.pressable:focus-visible,
+.focusable:focus-visible {
+  outline: 2px solid var(--cobalt-500);
+  outline-offset: 3px;
+}
+
+/* Disabled never uses opacity alone. It flattens — a dead key that has sunk
+   into the panel. */
+.pressable:disabled,
+.pressable[aria-disabled="true"] {
+  cursor: not-allowed;
+  box-shadow: var(--inset-1);
+  background: var(--bone-300);
+  color: var(--ink-300);
+  transform: none;
+}
+
+/* --- GRAIN ---------------------------------------------------------------
+   2.8% noise. The difference between "box-shadow" and "photographed object".
+   One shared filter reference, never re-declared per element.             */
+
+[data-grain="on"] .clay-1::after,
+[data-grain="on"] .clay-2::after,
+[data-grain="on"] .clay-3::after,
+[data-grain="on"] .clay-4::after,
+[data-grain="on"] .inset-1::after,
+[data-grain="on"] .inset-2::after,
+[data-grain="on"] .inset-3::after,
+[data-grain="on"] .grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: var(--grain-opacity);
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'>\
+<filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/>\
+<feColorMatrix type='saturate' values='0'/></filter>\
+<rect width='160' height='160' filter='url(%23n)'/></svg>");
+  background-size: 160px 160px;
+}
+
+[data-theme="dark"] .clay-1::after,
+[data-theme="dark"] .clay-2::after,
+[data-theme="dark"] .clay-3::after,
+[data-theme="dark"] .clay-4::after,
+[data-theme="dark"] .inset-1::after,
+[data-theme="dark"] .inset-2::after,
+[data-theme="dark"] .inset-3::after,
+[data-theme="dark"] .grain::after {
+  /* multiply on a dark ground eats the surface; screen keeps the tooth */
+  mix-blend-mode: screen;
+}
+
+/* --- REDUCED MOTION ------------------------------------------------------
+   The meaning survives even when the motion does not. §07.5              */
+
+@media (prefers-reduced-motion: reduce) {
+  .clay-1, .clay-2, .clay-3, .clay-4,
+  .inset-1, .inset-2, .inset-3,
+  .pressable {
+    transition-duration: 120ms !important;
+  }
+  .pressable:hover:not(:disabled) { transform: none !important; }
+  .pressable:active:not(:disabled) { transform: none !important; }
+}

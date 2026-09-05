@@ -1,0 +1,24 @@
+/* ============================================================================
+   TYPEFACES · blueprint §05.1 — self-hosted
+   Four families, all open-licence, served from our own origin.
+
+   Latin subsets only. The rupee sign U+20B9 lives in `latin-ext`, so Geist
+   pulls that too — every money figure in the product depends on it.
+
+   Self-hosting is not a preference here: `display: swap` on a 148px hero
+   figure produces a visible reflow that undoes the first impression, and a
+   third-party origin cannot be preloaded reliably.
+   ========================================================================= */
+
+/* Display · the voice. Variable, with a true optical-size axis. */
+@import "@fontsource-variable/bricolage-grotesque/opsz.css";
+
+/* Text & UI · the numbers. Chosen for its tabular figures. */
+@import "@fontsource-variable/geist/wght.css";
+
+/* Data & code. */
+@import "@fontsource-variable/geist-mono/wght.css";
+
+/* Editorial · used two or three times in the entire product. */
+@import "@fontsource/instrument-serif/latin-400.css";
+@import "@fontsource/instrument-serif/latin-400-italic.css";

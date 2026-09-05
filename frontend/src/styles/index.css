@@ -1,0 +1,194 @@
+@import "./fonts.css";
+@import "tailwindcss";
+@import "./tokens.css";
+@import "./clay.css";
+@import "./system.css";
+@import "./shell.css";
+@import "./signature.css";
+@import "./people.css";
+@import "./product.css";
+@import "./contracts.css";
+@import "./time.css";
+@import "./leave.css";
+@import "./payroll.css";
+@import "./dashboard.css";
+
+/* Surface the tokens as Tailwind utilities. `inline` so they resolve through
+   the CSS variables and therefore respond to [data-theme]. */
+@theme inline {
+  --color-bone-50:  var(--bone-50);
+  --color-bone-100: var(--bone-100);
+  --color-bone-200: var(--bone-200);
+  --color-bone-300: var(--bone-300);
+  --color-bone-400: var(--bone-400);
+  --color-bone-500: var(--bone-500);
+  --color-bone-600: var(--bone-600);
+  --color-bone-700: var(--bone-700);
+  --color-bone-800: var(--bone-800);
+
+  --color-ink-900: var(--ink-900);
+  --color-ink-700: var(--ink-700);
+  --color-ink-500: var(--ink-500);
+  --color-ink-400: var(--ink-400);
+  --color-ink-300: var(--ink-300);
+
+  --color-cobalt-tint: var(--cobalt-tint);
+  --color-cobalt:      var(--cobalt-500);
+  --color-cobalt-deep: var(--cobalt-deep);
+  --color-orange-tint: var(--orange-tint);
+  --color-orange:      var(--orange-500);
+  --color-orange-deep: var(--orange-deep);
+  --color-jade-tint:   var(--jade-tint);
+  --color-jade:        var(--jade-500);
+  --color-jade-deep:   var(--jade-deep);
+  --color-vermilion-tint: var(--vermilion-tint);
+  --color-vermilion:      var(--vermilion-500);
+  --color-vermilion-deep: var(--vermilion-deep);
+
+  --font-display: var(--font-display);
+  --font-sans:    var(--font-sans);
+  --font-mono:    var(--font-mono);
+  --font-voice:   var(--font-voice);
+
+  --radius-xs:  var(--r-xs);
+  --radius-sm:  var(--r-sm);
+  --radius-md:  var(--r-md);
+  --radius-lg:  var(--r-lg);
+  --radius-xl:  var(--r-xl);
+  --radius-2xl: var(--r-2xl);
+}
+
+/* ==========================================================================
+   BASE
+   ========================================================================= */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bone-200);
+  color: var(--ink-900);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.6;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background var(--t-slow) var(--ease-out),
+              color      var(--t-slow) var(--ease-out);
+}
+
+::selection { background: var(--cobalt-tint); color: var(--cobalt-deep); }
+
+button { font: inherit; color: inherit; background: none; border: none; padding: 0; }
+
+/* ==========================================================================
+   05.2 THE TYPE SCALE
+   Dramatic jumps, not a smooth ramp. The discontinuity is the point.
+   ========================================================================= */
+
+.t-display-xl {
+  font-family: var(--font-display);
+  font-size: clamp(72px, 11vw, 168px);
+  line-height: 0.86;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+}
+.t-display-l {
+  font-family: var(--font-display);
+  font-size: clamp(52px, 7vw, 104px);
+  line-height: 0.92;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+.t-display-m {
+  font-family: var(--font-display);
+  font-size: clamp(38px, 4.4vw, 68px);
+  line-height: 0.98;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+.t-display-s {
+  font-family: var(--font-display);
+  font-size: 40px;
+  line-height: 1.06;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.t-h1 { font-size: 30px; line-height: 1.15; font-weight: 600; letter-spacing: -0.02em; }
+.t-h2 { font-size: 23px; line-height: 1.2;  font-weight: 600; letter-spacing: -0.015em; }
+.t-h3 { font-size: 18px; line-height: 1.3;  font-weight: 600; letter-spacing: -0.01em; }
+
+.t-body-l { font-size: 17px; line-height: 1.65; }
+.t-body   { font-size: 15px; line-height: 1.6; }
+.t-ui     { font-size: 14px; line-height: 1.45; font-weight: 450; }
+.t-ui-sm  { font-size: 13px; line-height: 1.4;  font-weight: 450; }
+
+.t-micro {
+  font-size: 11px;
+  line-height: 1.3;
+  font-weight: 550;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.t-quote {
+  font-family: var(--font-voice);
+  font-size: clamp(26px, 3vw, 44px);
+  line-height: 1.28;
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* ==========================================================================
+   05.3 THE NUMBER SCALE
+   Money is the content of this product. Tabular, always, without exception.
+   ========================================================================= */
+
+.n-hero, .n-xl, .n-l, .n-m, .n-table, .n-mono {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+.n-hero {
+  font-family: var(--font-display);
+  font-size: clamp(64px, 9vw, 148px);
+  line-height: 0.88;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+.n-xl    { font-size: 52px; line-height: 1.02; font-weight: 550; letter-spacing: -0.03em; }
+.n-l     { font-size: 34px; line-height: 1.1;  font-weight: 550; letter-spacing: -0.02em; }
+.n-m     { font-size: 22px; line-height: 1.2;  font-weight: 500; letter-spacing: -0.01em; }
+.n-table { font-size: 14px; line-height: 1.45; font-weight: 450; }
+.n-mono  { font-family: var(--font-mono); font-size: 13px; font-weight: 400; }
+
+/* The currency mark and the decimals must not compete with the figure. */
+.n-cur { font-size: 0.72em; color: var(--ink-400); margin-right: 0.15em; }
+.n-dec { font-size: 0.62em; color: var(--ink-400); }
+.n-neg { color: var(--vermilion-500); }
+
+/* ==========================================================================
+   UTILITY
+   ========================================================================= */
+
+.hairline { background: var(--bone-600); opacity: 0.6; height: 1px; border: 0; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* Row hover: the ground shifts, nothing moves. Promoted to the Table
+   primitive in P1 — it lives here only so the proving ground can show
+   inset-at-density honestly. */
+.pg-row { transition: background var(--t-instant) linear; }
+.pg-row:hover { background: var(--bone-200); }
+
+/* §07.5 — the meaning survives even when the motion does not. */
+@media (prefers-reduced-motion: reduce) {
+  body, .pg-row { transition-duration: 120ms !important; }
+}

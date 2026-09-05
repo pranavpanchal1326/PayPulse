@@ -1,0 +1,213 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   P8 · TIME OFF
+   S8 requests · S9 allocations · S10 types · S11 balances
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Shared row pieces ────────────────────────────────────────────────── */
+
+.pp-lv__type {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+}
+
+.pp-lv__when {
+  display: grid;
+  gap: var(--s-1);
+  min-width: 168px;
+}
+
+.pp-lv__days { font-variant-numeric: tabular-nums; }
+
+/* A duration that differs from the calendar span is the screen's teaching
+   moment (§3.6) — orange marks it as *adjusted*, not as wrong. */
+.pp-lv__days--adjusted { color: var(--orange-500); }
+.pp-lv__days--adjusted .t-micro { color: var(--ink-400); }
+
+.pp-lv__headline {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  color: var(--ink-400);
+}
+
+/* ── The request drawer ───────────────────────────────────────────────── */
+
+.pp-lv__drawer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 264px;
+  gap: var(--s-5);
+  align-items: start;
+}
+
+@media (max-width: 780px) {
+  .pp-lv__drawer { grid-template-columns: minmax(0, 1fr); }
+}
+
+.pp-lv__drawerhead {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+
+.pp-lv__explain {
+  margin: var(--s-4) 0 0;
+  color: var(--ink-400);
+  max-width: 62ch;
+}
+
+.pp-lv__afterward { margin: var(--s-3) 0 0; }
+
+/* ── S11 · the balance card ───────────────────────────────────────────── */
+
+.pp-bal__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--s-4);
+}
+
+/* Raised — a balance is an object you hold, not a table you read (§09.5). */
+.pp-bal {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-5);
+  border-radius: var(--r-xl);
+  background: var(--bone-100);
+  box-shadow: var(--clay-3);
+}
+
+.pp-bal--compact { padding: var(--s-4); border-radius: var(--r-lg); box-shadow: var(--clay-2); }
+
+.pp-bal__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+
+.pp-bal__name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--ink-900);
+}
+
+.pp-bal__unpaid {
+  padding: 0 var(--s-2);
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--r-full);
+  background: var(--orange-tint);
+  color: var(--orange-deep);
+  letter-spacing: 0.06em;
+}
+
+.pp-bal__figure {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  color: var(--ink-400);
+}
+
+.pp-bal__figure--low { color: var(--orange-500); }
+
+.pp-bal__none {
+  margin: 0;
+  padding: var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--bone-300);
+  box-shadow: var(--inset-1);
+  color: var(--ink-400);
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+.pp-bal__legend {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-2) var(--s-4);
+  margin: 0;
+}
+
+.pp-bal__leg { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-2); }
+.pp-bal__leg dt { display: inline-flex; align-items: center; gap: var(--s-2); color: var(--ink-400); }
+.pp-bal__leg dd { margin: 0; font-variant-numeric: tabular-nums; color: var(--ink-900); }
+
+.pp-bal__swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-full);
+  display: inline-block;
+}
+
+.pp-bal__swatch--ink     { background: var(--ink-700); }
+.pp-bal__swatch--cobalt  { background: var(--cobalt-500); }
+.pp-bal__swatch--jade    { background: var(--jade-500); }
+.pp-bal__swatch--orange  { background: var(--orange-500); }
+
+.pp-bal__warn {
+  margin: 0;
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--orange-tint);
+  color: var(--orange-deep);
+}
+
+/* ── S10 · leave types ────────────────────────────────────────────────── */
+
+.pp-types {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--s-4);
+}
+
+.pp-type {
+  display: flex;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* §12 S10 — the type's colour appears ONLY here, as a 4px edge. */
+.pp-type__edge {
+  flex: none;
+  width: 4px;
+  align-self: stretch;
+}
+
+.pp-type__body {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-5);
+  min-width: 0;
+}
+
+.pp-type__head { display: flex; align-items: baseline; gap: var(--s-3); flex-wrap: wrap; }
+.pp-type__code { color: var(--ink-400); font-family: var(--font-mono); letter-spacing: 0.04em; }
+
+.pp-type__flags { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.pp-type__note { margin: 0; color: var(--ink-500); }
+
+/* ── A checkbox that explains itself ──────────────────────────────────────
+   Two of these flags decide what happens on a payslip, so the label is a
+   sentence rather than a word.                                            */
+
+.pp-check {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s-3);
+  align-items: start;
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: background var(--t-base) var(--ease-out);
+}
+
+.pp-check:hover { background: var(--bone-300); }
+.pp-check input { accent-color: var(--cobalt-500); width: 16px; height: 16px; margin-top: 2px; }
+.pp-check > span { display: grid; gap: var(--s-1); }
+.pp-check .t-ui-sm { color: var(--ink-500); }

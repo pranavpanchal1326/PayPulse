@@ -1,0 +1,490 @@
+/* ============================================================================
+   PAYPULSE — SYSTEM COMPONENTS
+   Built once (P1). Everything after this is composition.
+   Every value resolves to a token. A raw hex or px here is a defect.
+   ========================================================================= */
+
+/* --- BUTTON · §09.1 ------------------------------------------------------ */
+
+.pp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  padding: 0 var(--s-4);
+  height: 38px;
+  border-radius: var(--r-md);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 450;
+  line-height: 1.45;
+  white-space: nowrap;
+  background: var(--bone-50);
+  color: var(--ink-900);
+  box-shadow: var(--clay-2);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    box-shadow var(--t-base) var(--ease-out),
+    transform var(--t-base) var(--ease-out),
+    background var(--t-instant) linear,
+    color var(--t-instant) linear;
+}
+
+.pp-btn--sm { height: 32px; padding: 0 var(--s-3); font-size: 13px; border-radius: var(--r-sm); }
+.pp-btn--md { height: 38px; }
+.pp-btn--lg { height: 46px; padding: 0 var(--s-5); }
+.pp-btn--xl { height: 56px; padding: 0 var(--s-6); font-size: 15px; }
+
+/* A solid signal surface always pairs `-solid` with `--on-solid` (§04.2). */
+.pp-btn--primary { background: var(--cobalt-solid); color: var(--on-solid); }
+.pp-btn--danger  { background: var(--vermilion-solid); color: var(--on-solid); }
+
+/* Quiet: no material at rest. It earns clay on hover. */
+.pp-btn--quiet {
+  background: transparent;
+  color: var(--ink-500);
+  box-shadow: none;
+}
+.pp-btn--quiet:hover:not(:disabled) {
+  background: var(--bone-50);
+  color: var(--ink-900);
+  box-shadow: var(--clay-1);
+}
+
+/* Key: the instrument keys in the payrun cockpit — squarer, more mechanical. */
+.pp-btn--key { border-radius: var(--r-sm); }
+
+.pp-btn:hover:not(:disabled):not(.pp-btn--quiet) {
+  box-shadow: var(--clay-2-hover);
+  transform: translateY(-1px);
+}
+
+.pp-btn:active:not(:disabled) {
+  box-shadow: var(--clay-pressed);
+  transform: translateY(2px);
+  transition:
+    box-shadow var(--t-instant) var(--ease-out),
+    transform var(--t-instant) var(--ease-out);
+}
+
+.pp-btn:focus-visible {
+  outline: 2px solid var(--cobalt-500);
+  outline-offset: 3px;
+}
+
+/* Disabled never fades. It sinks — a dead key. */
+.pp-btn:disabled {
+  cursor: not-allowed;
+  background: var(--bone-300);
+  color: var(--ink-300);
+  box-shadow: var(--inset-1);
+  transform: none;
+}
+
+/* Loading holds the label's width so the key never resizes. */
+.pp-btn__label--loading { visibility: hidden; }
+.pp-btn__dots {
+  position: absolute;
+  display: inline-flex;
+  gap: 3px;
+}
+.pp-btn__dots i {
+  width: 3px;
+  height: 3px;
+  border-radius: var(--r-full);
+  background: currentColor;
+  animation: pp-dots 1s var(--ease-in-out) infinite;
+}
+.pp-btn__dots i:nth-child(2) { animation-delay: 0.12s; }
+.pp-btn__dots i:nth-child(3) { animation-delay: 0.24s; }
+@keyframes pp-dots {
+  0%, 60%, 100% { opacity: 0.25; }
+  30% { opacity: 1; }
+}
+
+.pp-btn--loading { position: relative; }
+.pp-btn svg { flex: none; }
+
+/* --- ICON BUTTON --------------------------------------------------------- */
+
+.pp-iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: var(--r-md);
+  color: var(--ink-500);
+  background: var(--bone-50);
+  box-shadow: var(--clay-1);
+  cursor: pointer;
+  transition: box-shadow var(--t-base) var(--ease-out),
+              transform var(--t-base) var(--ease-out),
+              color var(--t-instant) linear;
+}
+.pp-iconbtn--sm { width: 32px; height: 32px; border-radius: var(--r-sm); }
+.pp-iconbtn--quiet { background: transparent; box-shadow: none; }
+.pp-iconbtn:hover:not(:disabled) { color: var(--ink-900); box-shadow: var(--clay-2); transform: translateY(-1px); }
+.pp-iconbtn:active:not(:disabled) { box-shadow: var(--clay-pressed); transform: translateY(2px); }
+.pp-iconbtn:focus-visible { outline: 2px solid var(--cobalt-500); outline-offset: 3px; }
+.pp-iconbtn:disabled { cursor: not-allowed; color: var(--ink-300); box-shadow: var(--inset-1); }
+
+/* --- SEGMENTED CONTROL --------------------------------------------------- */
+
+.pp-seg {
+  display: inline-flex;
+  gap: var(--s-1);
+  padding: var(--s-1);
+  border-radius: var(--r-md);
+  background: var(--bone-300);
+  box-shadow: var(--inset-1);
+}
+.pp-seg__item {
+  padding: 0 var(--s-3);
+  height: 30px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  font-weight: 450;
+  color: var(--ink-500);
+  cursor: pointer;
+  transition: background var(--t-instant) linear, color var(--t-instant) linear,
+              box-shadow var(--t-quick) var(--ease-out);
+}
+.pp-seg__item:hover { color: var(--ink-900); }
+.pp-seg__item[aria-pressed="true"] {
+  background: var(--bone-50);
+  color: var(--ink-900);
+  box-shadow: var(--clay-1);
+}
+.pp-seg__item:focus-visible { outline: 2px solid var(--cobalt-500); outline-offset: 2px; }
+
+/* --- FIELD · §09.3 ------------------------------------------------------- */
+
+.pp-field { display: flex; flex-direction: column; gap: var(--s-2); }
+
+.pp-field__label {
+  font-size: 11px;
+  font-weight: 550;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-400);
+}
+/* Required is not an error, so it is orange, not red. */
+.pp-field__req { color: var(--orange-500); margin-left: 2px; }
+
+.pp-input {
+  width: 100%;
+  height: 38px;
+  padding: 0 var(--s-3);
+  border: none;
+  border-radius: var(--r-md);
+  background: var(--bone-300);
+  box-shadow: var(--inset-1);
+  color: var(--ink-900);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  transition: box-shadow var(--t-base) var(--ease-out), background var(--t-instant) linear;
+}
+textarea.pp-input { height: auto; min-height: 96px; padding: var(--s-3); resize: vertical; line-height: 1.6; }
+select.pp-input { appearance: none; padding-right: var(--s-6); cursor: pointer; }
+
+.pp-input::placeholder { color: var(--ink-400); }
+.pp-input:focus { outline: 2px solid var(--cobalt-500); outline-offset: 3px; box-shadow: var(--inset-2); }
+.pp-input:disabled { cursor: not-allowed; color: var(--ink-300); background: var(--bone-400); }
+
+.pp-field--error .pp-input { background: var(--vermilion-tint); box-shadow: var(--inset-2); }
+.pp-field__help { font-size: 13px; line-height: 1.4; color: var(--ink-400); }
+.pp-field--error .pp-field__help { color: var(--vermilion-deep); }
+
+.pp-select-wrap { position: relative; display: block; }
+.pp-select-wrap > svg {
+  position: absolute;
+  right: var(--s-3);
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--ink-400);
+}
+
+/* --- WELL & CARD · §09.5 ------------------------------------------------- */
+
+.pp-well { background: var(--bone-300); box-shadow: var(--inset-2); border-radius: var(--r-lg); }
+.pp-well--deep { background: var(--bone-400); box-shadow: var(--inset-3); }
+
+.pp-card {
+  background: var(--bone-100);
+  box-shadow: var(--clay-3);
+  border-radius: var(--r-lg);
+  padding: var(--s-5);
+  transition: box-shadow var(--t-base) var(--ease-out), transform var(--t-base) var(--ease-out);
+}
+.pp-card--interactive { cursor: pointer; }
+.pp-card--interactive:hover { box-shadow: var(--clay-3-hover); transform: translateY(-2px); }
+.pp-card--interactive:focus-visible { outline: 2px solid var(--cobalt-500); outline-offset: 3px; }
+
+/* --- BADGE / STATE CHIP · §09.4 ------------------------------------------ */
+
+.pp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  height: 22px;
+  padding: 0 var(--s-2);
+  border-radius: var(--r-sm);
+  box-shadow: var(--clay-1);
+  font-size: 11px;
+  font-weight: 550;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+/* State survives greyscale and colour-blindness through the dot, not the hue. */
+.pp-badge__dot { width: 5px; height: 5px; border-radius: var(--r-full); background: currentColor; flex: none; }
+
+.pp-badge--neutral   { background: var(--bone-400);      color: var(--ink-500); }
+.pp-badge--cobalt    { background: var(--cobalt-tint);   color: var(--cobalt-deep); }
+.pp-badge--orange    { background: var(--orange-tint);   color: var(--orange-deep); }
+.pp-badge--jade      { background: var(--jade-tint);     color: var(--jade-deep); }
+.pp-badge--vermilion { background: var(--vermilion-tint);color: var(--vermilion-deep); }
+/* PAID is the only filled chip in the product. It is terminal — it should
+   read as an achievement. */
+.pp-badge--solid     { background: var(--jade-solid);    color: var(--on-solid); }
+.pp-badge--cancelled { background: var(--bone-400); color: var(--ink-400); text-decoration: line-through; }
+
+/* --- TABLE · §09.2 ------------------------------------------------------- */
+
+.pp-table-well { padding: var(--s-1); overflow: hidden; }
+.pp-table { width: 100%; border-collapse: collapse; }
+
+.pp-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bone-300);
+  padding: var(--s-3) var(--s-4);
+  text-align: left;
+  font-size: 11px;
+  font-weight: 550;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-400);
+  white-space: nowrap;
+}
+.pp-table th.pp-num, .pp-table td.pp-num { text-align: right; }
+
+.pp-table tbody td {
+  padding: var(--s-3) var(--s-4);
+  border-top: 1px solid color-mix(in srgb, var(--bone-600) 60%, transparent);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+/* The ground shifts. Nothing moves. No zebra — the well already separates. */
+.pp-table tbody tr { transition: background var(--t-instant) linear; }
+.pp-table tbody tr:hover { background: var(--bone-200); }
+.pp-table tbody tr[aria-selected="true"] {
+  background: var(--cobalt-tint);
+  box-shadow: inset 2px 0 0 var(--cobalt-500);
+}
+.pp-table tbody tr:focus-visible { outline: 2px solid var(--cobalt-500); outline-offset: -2px; }
+
+.pp-table--compact tbody td { padding: var(--s-2) var(--s-4); }
+.pp-table--comfortable tbody td { padding: var(--s-4); }
+
+/* Row actions appear on hover, and are always also in the row's ⋯ menu. */
+.pp-row-actions { display: flex; gap: var(--s-1); justify-content: flex-end; opacity: 0; transition: opacity var(--t-instant) linear; }
+.pp-table tbody tr:hover .pp-row-actions,
+.pp-table tbody tr:focus-within .pp-row-actions { opacity: 1; }
+
+/* --- SKELETON ------------------------------------------------------------ */
+
+.pp-skel {
+  display: block;
+  height: 10px;
+  border-radius: var(--r-xs);
+  background: var(--bone-400);
+  animation: pp-pulse 1.4s var(--ease-in-out) infinite;
+}
+@keyframes pp-pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+
+/* --- METER · §S11 -------------------------------------------------------- */
+
+.pp-meter {
+  display: flex;
+  gap: 2px;
+  height: 34px;
+  padding: 3px;
+  border-radius: var(--r-md);
+  background: var(--bone-300);
+  box-shadow: var(--inset-2);
+  overflow: hidden;
+}
+.pp-meter__seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2px;
+  border-radius: var(--r-xs);
+  font-size: 11px;
+  font-weight: 550;
+  transition: flex-grow var(--t-slow) var(--ease-out);
+}
+
+/* --- OVERLAYS · §09.6 ---------------------------------------------------- */
+
+.pp-scrim {
+  position: fixed;
+  inset: 0;
+  /* never a heavy scrim — the context behind must stay readable */
+  background: rgb(26 23 20 / 0.08);
+  z-index: var(--z-drawer);
+}
+
+.pp-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(520px, 100vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--bone-100);
+  box-shadow: var(--clay-4);
+  border-radius: var(--r-xl) 0 0 var(--r-xl);
+  z-index: var(--z-drawer);
+}
+.pp-drawer--wide { width: min(680px, 100vw); }
+.pp-drawer__head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-5);
+  border-bottom: 1px solid var(--bone-600);
+}
+.pp-drawer__body { flex: 1; overflow-y: auto; padding: var(--s-5); }
+
+.pp-modal-layer {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s-5);
+  z-index: var(--z-modal);
+}
+.pp-modal {
+  width: min(520px, 100%);
+  background: var(--bone-100);
+  box-shadow: var(--clay-4);
+  border-radius: var(--r-xl);
+  padding: var(--s-6);
+}
+
+.pp-toast-layer {
+  position: fixed;
+  left: var(--s-5);
+  bottom: var(--s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  z-index: var(--z-toast);
+}
+.pp-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  max-width: 380px;
+  padding: var(--s-3) var(--s-4);
+  background: var(--bone-50);
+  box-shadow: var(--clay-3);
+  border-radius: var(--r-md);
+  font-size: 14px;
+}
+
+.pp-tooltip {
+  padding: var(--s-2) var(--s-3);
+  background: var(--bone-50);
+  box-shadow: var(--clay-2);
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  color: var(--ink-900);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: var(--z-tooltip);
+}
+
+.pp-menu {
+  min-width: 200px;
+  padding: var(--s-1);
+  background: var(--bone-50);
+  box-shadow: var(--clay-3);
+  border-radius: var(--r-md);
+  z-index: var(--z-command);
+}
+.pp-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-sm);
+  font-size: 14px;
+  color: var(--ink-900);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--t-instant) linear;
+}
+.pp-menu__item:hover, .pp-menu__item[data-active="true"] { background: var(--bone-200); }
+.pp-menu__item:focus-visible { outline: 2px solid var(--cobalt-500); outline-offset: -2px; }
+.pp-menu__item--danger { color: var(--vermilion-deep); }
+
+/* --- EMPTY STATE · §09.8 ------------------------------------------------- */
+
+.pp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--s-8) var(--s-5);
+  gap: var(--s-3);
+}
+.pp-empty__art { width: 180px; height: 180px; margin-bottom: var(--s-2); }
+.pp-empty__body { max-width: 42ch; color: var(--ink-500); font-size: 15px; line-height: 1.6; }
+
+/* --- WARNING CARD · §09.9 ------------------------------------------------ */
+
+.pp-warning {
+  /* Single-sided accent, so that edge is square (§06.4). */
+  border-radius: 0 var(--r-lg) var(--r-lg) 0;
+  border-left: 4px solid var(--bone-700);
+  background: var(--bone-50);
+  box-shadow: var(--clay-2);
+  padding: var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.pp-warning--error   { border-left-color: var(--vermilion-500); }
+.pp-warning--warning { border-left-color: var(--orange-500); }
+.pp-warning--info    { border-left-color: var(--cobalt-500); }
+
+.pp-warning__head { display: flex; align-items: center; gap: var(--s-2); }
+.pp-warning__code { font-family: var(--font-mono); font-size: 13px; color: var(--ink-900); }
+.pp-warning__who { font-size: 13px; color: var(--ink-500); }
+/* Every warning states what it blocks. */
+.pp-warning__blocks { font-size: 11px; font-weight: 550; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-400); }
+
+/* --- REDUCED MOTION · §07.5 ---------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .pp-btn, .pp-iconbtn, .pp-card, .pp-input, .pp-seg__item, .pp-table tbody tr,
+  .pp-row-actions, .pp-menu__item, .pp-meter__seg {
+    transition-duration: 120ms !important;
+  }
+  .pp-btn:hover, .pp-iconbtn:hover, .pp-card--interactive:hover,
+  .pp-btn:active, .pp-iconbtn:active { transform: none !important; }
+  .pp-skel, .pp-btn__dots i { animation: none !important; }
+}

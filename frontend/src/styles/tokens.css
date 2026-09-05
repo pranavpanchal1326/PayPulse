@@ -1,0 +1,311 @@
+/* ============================================================================
+   PAYPULSE — DESIGN TOKENS
+   The single source of every value in the product.
+   See docs/DESIGN-BLUEPRINT.md. A hex, px or shadow written anywhere else
+   is a defect.
+   ========================================================================= */
+
+:root {
+  color-scheme: light;
+
+  /* --- 04.1 NEUTRAL FOUNDATION · bone & putty ---------------------------
+     Warm throughout. A cool grey anywhere in this product is a bug.
+
+     THE FIELD IS PUTTY, NOT PAPER. Raised clay must be able to be brighter
+     than the ground it sits on, or it has nowhere to catch the light. On any
+     physical instrument the chassis is darker than the keys — measured in P0,
+     where a paper-white ground made clay-3 invisible at 1.018 contrast.
+
+     The ramp reads as depth, in order:
+       PROUD (50, 100)  >  FLUSH (200)  >  INSET (300, 400)                 */
+  --bone-50:  #FEFCF9;   /* raised clay top surface — catches the light */
+  --bone-100: #FAF7F1;   /* card body */
+  --bone-200: #EFEAE1;   /* PAGE GROUND — the field */
+  --bone-300: #E5DFD3;   /* inset well floor — below the field */
+  --bone-400: #DAD2C4;   /* deep well */
+  --bone-500: #CCC2B1;   /* clay body, deep */
+  --bone-600: #D5CBBA;   /* hairline border */
+  --bone-700: #BFB3A0;   /* border, hover */
+  --bone-800: #A2937C;   /* border, active */
+
+  --ink-900: #1A1714;    /* primary text — warm near-black, never #000 */
+  --ink-700: #3D372F;    /* headings on tinted grounds */
+  --ink-500: #5A5248;    /* secondary text */
+  /* ink-400 carries t-micro (11px) and t-ui-sm (13px), which are SMALL text
+     and therefore need 4.5:1. Measured in P0: the original #8B8172 was
+     3.20:1 against the field and failed. Now 5.53:1 on the field and
+     comfortably clear on every ground it can land on, including a deep well. */
+  --ink-400: #5F564C;    /* muted text, placeholders, axis labels */
+  /* Non-text and disabled only — exempt from contrast, never carries copy. */
+  --ink-300: #A9A093;    /* disabled ink, chart gridlines */
+
+  /* --- 04.2 SIGNAL · four hues, used sparingly ------------------------- */
+  --cobalt-tint:    #E8EDFF;
+  --cobalt-500:     #2B4FF5;
+  --cobalt-deep:    #16277E;
+
+  --orange-tint:    #FFEDE3;
+  --orange-500:     #FF6B2C;
+  --orange-deep:    #8A3210;
+
+  --jade-tint:      #E1F6EC;
+  --jade-500:       #0FA968;
+  --jade-deep:      #075435;
+
+  --vermilion-tint: #FFE9EA;
+  --vermilion-500:  #E5484D;
+  --vermilion-deep: #7C1D20;
+
+  /* SOLID FILLS · the one place a signal covers a large area and carries text.
+     The 500s are tuned to be legible AS A MARK on the field; several of them
+     are too light to sit under white text (measured in P0: white on jade-500
+     is 3.05:1). So a solid surface uses `-solid`, and its label always uses
+     `--on-solid`. Charts, dots and borders keep using the 500. */
+  --cobalt-solid:    #2B4FF5;
+  --orange-solid:    #B34513;
+  --jade-solid:      #0A7D4D;
+  --vermilion-solid: #C0272C;
+  --on-solid:        #FFFFFF;
+
+  /* --- 02 MATERIAL · the light model made numeric ----------------------
+     Shadow colour is WARM. Highlight comes from above, shade from below.  */
+  --clay-hl-1: rgb(255 255 255 / 0.90);
+  --clay-hl-2: rgb(255 255 255 / 0.92);
+  --clay-hl-3: rgb(255 255 255 / 0.94);
+  --clay-hl-4: rgb(255 255 255 / 0.95);
+  --clay-sh:   rgb(74 58 42 / 0.07);
+
+  --clay-1:
+    0 1px 1px         rgb(74 58 42 / 0.07),
+    0 2px 5px   -1px  rgb(74 58 42 / 0.13),
+    inset 0 1px 0     var(--clay-hl-1),
+    inset 0 -2px 0    rgb(74 58 42 / 0.07);
+
+  --clay-2:
+    0 1px 2px         rgb(74 58 42 / 0.08),
+    0 6px 12px  -3px  rgb(74 58 42 / 0.16),
+    0 18px 30px -10px rgb(74 58 42 / 0.13),
+    inset 0 2px 0     var(--clay-hl-2),
+    inset 0 -3px 0    var(--clay-sh);
+
+  --clay-3:
+    0 2px 4px         rgb(74 58 42 / 0.07),
+    0 12px 22px  -6px rgb(74 58 42 / 0.15),
+    0 28px 48px -16px rgb(74 58 42 / 0.14),
+    inset 0 2px 0     var(--clay-hl-3),
+    inset 0 -4px 0    rgb(74 58 42 / 0.07);
+
+  --clay-4:
+    0 4px 8px         rgb(74 58 42 / 0.08),
+    0 20px 40px -10px rgb(74 58 42 / 0.20),
+    0 48px 84px -24px rgb(74 58 42 / 0.18),
+    inset 0 3px 0     var(--clay-hl-4),
+    inset 0 -5px 0    var(--clay-sh);
+
+  /* hover — it LIFTS, so the shadow grows, softens, slides down-right */
+  --clay-2-hover:
+    0 2px 3px         rgb(74 58 42 / 0.08),
+    0 10px 18px  -3px rgb(74 58 42 / 0.18),
+    0 26px 42px -12px rgb(74 58 42 / 0.15),
+    inset 0 2px 0     var(--clay-hl-3),
+    inset 0 -3px 0    var(--clay-sh);
+
+  --clay-3-hover:
+    0 3px 5px         rgb(74 58 42 / 0.08),
+    0 18px 32px  -6px rgb(74 58 42 / 0.18),
+    0 40px 66px -18px rgb(74 58 42 / 0.16),
+    inset 0 2px 0     var(--clay-hl-4),
+    inset 0 -4px 0    rgb(74 58 42 / 0.07);
+
+  /* active — THE SWAP. Highlight moves to the bottom, shadow collapses in. */
+  --clay-pressed:
+    inset 0 3px 6px rgb(74 58 42 / 0.15),
+    inset 0 -1px 0  rgb(255 255 255 / 0.45),
+    0 1px 1px       rgb(74 58 42 / 0.04);
+
+  /* --- 02.2 INSET · milled into the material --------------------------
+     The lip of white BELOW a recessed element is what sells the deboss.   */
+  --inset-1:
+    inset 0 2px 3px  rgb(74 58 42 / 0.09),
+    inset 0 1px 0    rgb(74 58 42 / 0.06),
+    inset 0 -1px 0   rgb(255 255 255 / 0.65),
+    0 1px 0          rgb(255 255 255 / 0.60);
+
+  --inset-2:
+    inset 0 3px 6px  rgb(74 58 42 / 0.10),
+    inset 0 1px 0    rgb(74 58 42 / 0.07),
+    inset 0 -1px 0   rgb(255 255 255 / 0.70),
+    0 1px 0          rgb(255 255 255 / 0.70);
+
+  --inset-3:
+    inset 0 5px 12px rgb(74 58 42 / 0.13),
+    inset 0 2px 0    rgb(74 58 42 / 0.08),
+    inset 0 -1px 0   rgb(255 255 255 / 0.72),
+    0 1px 0          rgb(255 255 255 / 0.72);
+
+  --grain-opacity: 0.028;
+
+  /* --- 05.1 TYPE ------------------------------------------------------- */
+  --font-display: "Bricolage Grotesque", "Geist", system-ui, sans-serif;
+  --font-sans:    "Geist", system-ui, -apple-system, sans-serif;
+  --font-mono:    "Geist Mono", ui-monospace, "SF Mono", monospace;
+  --font-voice:   "Instrument Serif", Georgia, serif;
+
+  /* --- 06.1 SPACING · 4px base. Values outside this scale are forbidden. */
+  --s-1: 4px;   --s-2: 8px;   --s-3: 12px;  --s-4: 16px;
+  --s-5: 24px;  --s-6: 32px;  --s-7: 48px;  --s-8: 64px;
+  --s-9: 96px;  --s-10: 128px; --s-11: 192px; --s-12: 256px;
+
+  /* --- 06.3 RADIUS · scales with element size ------------------------- */
+  --r-xs:   6px;   /* inputs inside dense tables */
+  --r-sm:  10px;   /* badges, chips, tags */
+  --r-md:  14px;   /* buttons, inputs, menu items */
+  --r-lg:  20px;   /* cards, wells, panels */
+  --r-xl:  28px;   /* drawers, modals, hero blocks */
+  --r-2xl: 40px;   /* block-stack pieces, landing objects */
+  --r-full: 999px; /* avatars and the pulse ONLY */
+
+  /* --- 06.5 Z-INDEX ---------------------------------------------------- */
+  --z-base: 0;      --z-raised: 10;  --z-sticky: 100;
+  --z-nav: 200;     --z-drawer: 300; --z-modal: 400;
+  --z-toast: 500;   --z-command: 600; --z-tooltip: 700;
+
+  /* --- 07.1 MOTION ----------------------------------------------------- */
+  --t-instant: 90ms;
+  --t-quick:  160ms;
+  --t-base:   240ms;
+  --t-slow:   420ms;
+  --t-scene:  900ms;
+  --ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* ============================================================================
+   04.4 THE DARK ROOM
+   Clay in low light has less specular and more occlusion. Matching that is
+   what keeps it reading as the same material rather than an inverted palette.
+   ========================================================================= */
+
+/* `[data-room="dark"]` is the payrun (§04.4). It is the SAME ramp, not a
+   second palette — declaring it here rather than copying the values into
+   product.css is what stops the product growing two different darks. */
+[data-theme="dark"],
+[data-room="dark"] {
+  color-scheme: dark;
+
+  --bone-50:  #332C24;
+  --bone-100: #2E2820;
+  --bone-200: #241F19;
+  --bone-300: #1B1712;
+  --bone-400: #262119;
+  --bone-500: #1E1A15;
+  --bone-600: #3A322A;
+  --bone-700: #4A4036;
+  --bone-800: #5C5145;
+
+  --ink-900: #F7F3EA;
+  --ink-700: #DCD4C6;
+  --ink-500: #C2B8A8;
+  --ink-400: #A3978A;   /* clears 4.5:1 on every dark ground incl. clay tops */
+  --ink-300: #6B6154;   /* non-text and disabled only */
+
+  --cobalt-tint:    #1B2455;
+  --cobalt-500:     #5B79FF;
+  --cobalt-deep:    #C7D2FF;
+
+  --orange-tint:    #40220F;
+  --orange-500:     #FF8046;
+  --orange-deep:    #FFD5BE;
+
+  --jade-tint:      #0D3324;
+  --jade-500:       #2ECB88;
+  --jade-deep:      #B6EFD3;
+
+  --vermilion-tint: #401518;
+  --vermilion-500:  #FF6B6F;
+  --vermilion-deep: #FFCBCC;
+
+  /* In the dark room the signals are BRIGHT, so a solid surface carries dark
+     ink rather than white — white on jade is 2.10:1 here. Cobalt is nudged
+     brighter so dark ink clears 4.5:1 on it too. */
+  --cobalt-solid:    #7A91FF;
+  --orange-solid:    #FF8046;
+  --jade-solid:      #2ECB88;
+  --vermilion-solid: #FF6B6F;
+  --on-solid:        #241F19;
+
+  /* Highlight weakens and warms. Drop shadow strengthens and goes near-black. */
+  --clay-hl-1: rgb(255 244 225 / 0.07);
+  --clay-hl-2: rgb(255 244 225 / 0.09);
+  --clay-hl-3: rgb(255 244 225 / 0.11);
+  --clay-hl-4: rgb(255 244 225 / 0.13);
+  --clay-sh:   rgb(0 0 0 / 0.34);
+
+  --clay-1:
+    0 1px 1px         rgb(0 0 0 / 0.28),
+    0 3px 6px   -2px  rgb(0 0 0 / 0.36),
+    inset 0 1px 0     var(--clay-hl-1),
+    inset 0 -2px 0    rgb(0 0 0 / 0.30);
+
+  --clay-2:
+    0 1px 2px         rgb(0 0 0 / 0.30),
+    0 8px 16px  -6px  rgb(0 0 0 / 0.44),
+    0 20px 32px -14px rgb(0 0 0 / 0.36),
+    inset 0 2px 0     var(--clay-hl-2),
+    inset 0 -3px 0    var(--clay-sh);
+
+  --clay-3:
+    0 2px 4px         rgb(0 0 0 / 0.30),
+    0 14px 28px -10px rgb(0 0 0 / 0.46),
+    0 32px 56px -22px rgb(0 0 0 / 0.40),
+    inset 0 2px 0     var(--clay-hl-3),
+    inset 0 -4px 0    rgb(0 0 0 / 0.30);
+
+  --clay-4:
+    0 4px 8px         rgb(0 0 0 / 0.34),
+    0 24px 48px -16px rgb(0 0 0 / 0.54),
+    0 56px 96px -32px rgb(0 0 0 / 0.46),
+    inset 0 3px 0     var(--clay-hl-4),
+    inset 0 -5px 0    var(--clay-sh);
+
+  --clay-2-hover:
+    0 2px 3px         rgb(0 0 0 / 0.30),
+    0 12px 22px  -6px rgb(0 0 0 / 0.48),
+    0 28px 44px -16px rgb(0 0 0 / 0.40),
+    inset 0 2px 0     var(--clay-hl-3),
+    inset 0 -3px 0    var(--clay-sh);
+
+  --clay-3-hover:
+    0 3px 5px         rgb(0 0 0 / 0.32),
+    0 20px 36px -10px rgb(0 0 0 / 0.50),
+    0 44px 72px -24px rgb(0 0 0 / 0.42),
+    inset 0 2px 0     var(--clay-hl-4),
+    inset 0 -4px 0    rgb(0 0 0 / 0.30);
+
+  --clay-pressed:
+    inset 0 3px 6px rgb(0 0 0 / 0.50),
+    inset 0 -1px 0  rgb(255 244 225 / 0.06),
+    0 1px 1px       rgb(0 0 0 / 0.24);
+
+  /* Inset relies on a white lip in light mode; in the dark there is no white
+     to lend, so the lip becomes a faint warm line and the well goes deeper. */
+  --inset-1:
+    inset 0 2px 4px  rgb(0 0 0 / 0.44),
+    inset 0 1px 0    rgb(0 0 0 / 0.36),
+    inset 0 -1px 0   rgb(255 244 225 / 0.05),
+    0 1px 0          rgb(255 244 225 / 0.04);
+
+  --inset-2:
+    inset 0 3px 8px  rgb(0 0 0 / 0.50),
+    inset 0 1px 0    rgb(0 0 0 / 0.40),
+    inset 0 -1px 0   rgb(255 244 225 / 0.06),
+    0 1px 0          rgb(255 244 225 / 0.05);
+
+  --inset-3:
+    inset 0 5px 14px rgb(0 0 0 / 0.56),
+    inset 0 2px 0    rgb(0 0 0 / 0.44),
+    inset 0 -1px 0   rgb(255 244 225 / 0.06),
+    0 1px 0          rgb(255 244 225 / 0.05);
+
+  --grain-opacity: 0.045;
+}

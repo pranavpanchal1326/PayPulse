@@ -1,0 +1,236 @@
+/* ============================================================================
+   THE SHELL · blueprint §11 and §12 (S1)
+   The sidebar is flush with the page, not a card. Restraint here is what lets
+   the content carry the weight.
+   ========================================================================= */
+
+.pp-skip {
+  position: absolute;
+  left: var(--s-4);
+  top: calc(-1 * var(--s-10));
+  z-index: var(--z-tooltip);
+  padding: var(--s-2) var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--bone-50);
+  box-shadow: var(--clay-2);
+  color: var(--ink-900);
+  transition: top var(--t-base) var(--ease-out);
+}
+.pp-skip:focus { top: var(--s-4); }
+
+.pp-shell {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+/* --- SIDEBAR ------------------------------------------------------------- */
+
+.pp-sidebar {
+  display: flex;
+  flex-direction: column;
+  background: var(--bone-100);
+  border-right: 1px solid var(--bone-600);
+  padding: var(--s-4);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+.pp-sidebar__brand { padding: var(--s-2) var(--s-3) var(--s-6); color: var(--ink-900); }
+.pp-sidebar__nav { display: flex; flex-direction: column; gap: var(--s-1); }
+
+.pp-navitem {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 0 var(--s-3);
+  height: 38px;
+  border-radius: var(--r-md);
+  color: var(--ink-500);
+  font-size: 14px;
+  font-weight: 450;
+  text-decoration: none;
+  transition: background var(--t-instant) linear, color var(--t-instant) linear,
+              box-shadow var(--t-quick) var(--ease-out);
+}
+.pp-navitem:hover { color: var(--ink-900); background: var(--bone-200); }
+/* The active item is a raised clay key. */
+.pp-navitem--active {
+  background: var(--cobalt-tint);
+  color: var(--cobalt-deep);
+  box-shadow: var(--clay-1);
+}
+.pp-navitem:focus-visible { outline: 2px solid var(--cobalt-500); outline-offset: 2px; }
+
+.pp-sidebar__foot { margin-top: auto; display: flex; flex-direction: column; gap: var(--s-4); }
+.pp-sidebar__pulse { display: flex; align-items: center; gap: var(--s-3); padding: 0 var(--s-3); }
+.pp-sidebar__who { padding: var(--s-3); border-radius: var(--r-md); background: var(--bone-300); box-shadow: var(--inset-1); }
+
+/* The name is the pulse. Silent, and it stops under reduced motion. */
+.pp-pulse {
+  display: block;
+  width: 9px;
+  height: 9px;
+  border-radius: var(--r-full);
+  background: var(--jade-500);
+  animation: pp-beat 2s var(--ease-in-out) infinite;
+}
+@keyframes pp-beat {
+  0%, 100% { transform: scale(1);    opacity: 0.55; }
+  12%      { transform: scale(1.45); opacity: 1; }
+  24%      { transform: scale(1);    opacity: 0.8; }
+  36%      { transform: scale(1.25); opacity: 1; }
+}
+
+/* --- TOP BAR ------------------------------------------------------------- */
+
+.pp-main { display: flex; flex-direction: column; min-width: 0; }
+
+.pp-topbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  height: 56px;
+  padding: 0 var(--s-6);
+  background: var(--bone-200);
+  border-bottom: 1px solid var(--bone-600);
+}
+.pp-topbar__actions { margin-left: auto; display: flex; align-items: center; gap: var(--s-1); }
+
+.pp-crumbs { display: flex; align-items: center; gap: var(--s-2); font-size: 13px; color: var(--ink-500); }
+.pp-crumbs__sep { color: var(--ink-400); margin: 0 var(--s-2); }
+.pp-crumbs__here { color: var(--ink-900); }
+
+.pp-content { padding: var(--s-6); flex: 1; min-width: 0; }
+
+.pp-pagehead {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-5);
+  padding-bottom: var(--s-6);
+}
+/* The action is pushed to the right edge — but only when there IS one.
+   `:last-child` alone also matches the title block on a header with no
+   action, which shoved the whole page title to the right. */
+.pp-pagehead > div:not(:only-child):last-child { margin-left: auto; }
+.pp-pagehead__meta { color: var(--ink-500); margin: var(--s-2) 0 0; }
+
+/* --- COMMAND MENU · §09.7 ------------------------------------------------ */
+
+.pp-cmd-layer {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--s-9) var(--s-5) var(--s-5);
+  z-index: var(--z-command);
+  pointer-events: none;
+}
+.pp-cmd {
+  width: min(640px, 100%);
+  background: var(--bone-100);
+  box-shadow: var(--clay-4);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  pointer-events: auto;
+}
+.pp-cmd__search {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-5);
+  border-bottom: 1px solid var(--bone-600);
+  color: var(--ink-400);
+}
+.pp-cmd__search input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--ink-900);
+  font-family: var(--font-sans);
+  font-size: 15px;
+}
+.pp-cmd__search input::placeholder { color: var(--ink-400); }
+
+.pp-cmd__list { list-style: none; margin: 0; padding: var(--s-2); max-height: 380px; overflow-y: auto; }
+.pp-cmd__section { color: var(--ink-400); padding: var(--s-3) var(--s-3) var(--s-2); margin: 0; }
+.pp-cmd__empty { color: var(--ink-400); padding: var(--s-5); text-align: center; }
+
+.pp-cmd__item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  color: var(--ink-900);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--t-instant) linear;
+}
+.pp-cmd__item[data-active="true"] { background: var(--bone-300); }
+.pp-cmd__item:focus-visible { outline: 2px solid var(--cobalt-500); outline-offset: -2px; }
+.pp-cmd__label { flex: 1; }
+.pp-cmd__hint { color: var(--ink-400); }
+
+/* --- LOGIN · S1 ---------------------------------------------------------- */
+
+.pp-login {
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+  min-height: 100vh;
+  background: var(--bone-200);
+  color: var(--ink-900);
+}
+.pp-login__brand {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--s-9);
+}
+.pp-login__panel { display: flex; align-items: center; justify-content: center; padding: var(--s-6); }
+.pp-login__card { width: min(420px, 100%); padding: var(--s-7); }
+.pp-login__error {
+  margin: var(--s-4) 0 0;
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--vermilion-tint);
+  color: var(--vermilion-deep);
+}
+
+/* --- PERMISSION DENIED --------------------------------------------------- */
+
+.pp-denied {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--s-10) var(--s-5);
+  gap: var(--s-3);
+}
+
+/* --- RESPONSIVE · §06.2 -------------------------------------------------- */
+
+@media (max-width: 1024px) {
+  .pp-shell { grid-template-columns: 64px minmax(0, 1fr); }
+  .pp-navitem span, .pp-sidebar__brand span, .pp-sidebar__who, .pp-sidebar__pulse span { display: none; }
+  .pp-navitem { justify-content: center; padding: 0; }
+  .pp-sidebar { align-items: center; }
+  .pp-content { padding: var(--s-5); }
+}
+
+@media (max-width: 768px) {
+  .pp-login { grid-template-columns: 1fr; }
+  .pp-login__brand { padding: var(--s-7) var(--s-5) 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pp-pulse { animation: none !important; }
+  .pp-navitem, .pp-cmd__item, .pp-skip { transition-duration: 120ms !important; }
+}

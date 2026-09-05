@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>board preview</title>
+<style>html,body,#root{margin:0;height:100%;width:100%;background:#121212}</style>
+<script>window.EXCALIDRAW_ASSET_PATH = "https://cdn.jsdelivr.net/npm/@excalidraw/excalidraw@0.17.6/dist/";</script>
+<script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@excalidraw/excalidraw@0.17.6/dist/excalidraw.production.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script>
+(async () => {
+  const s = await (await fetch('./PeoplePay360-System-Design.excalidraw')).json();
+  window.__api = null;
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    React.createElement(ExcalidrawLib.Excalidraw, {
+      initialData: { elements: s.elements, appState: { viewBackgroundColor: '#ffffff' }, scrollToContent: true },
+      viewModeEnabled: true,
+      theme: 'dark',
+      excalidrawAPI: (api) => { window.__api = api; window.__ready = true; }
+    })
+  );
+})();
+</script>
+</body>
+</html>

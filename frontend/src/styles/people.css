@@ -1,0 +1,226 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   P5 · PEOPLE
+   Screens S2 (employees) and S3 (the employee page). Every value here is a
+   token; components reference these classes and never re-declare them.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Filter bar ───────────────────────────────────────────────────────── */
+
+.pp-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--s-3);
+  margin-bottom: var(--s-5);
+}
+
+.pp-filters__search { flex: 1 1 260px; min-width: 200px; }
+.pp-filters__field  { flex: 0 1 176px; }
+
+/* Pushed to its own end of the bar: it changes the shape of the view, the
+   others only narrow it. */
+.pp-filters__view { margin-left: auto; display: flex; gap: var(--s-2); align-items: flex-end; }
+
+.pp-filters__count {
+  color: var(--ink-400);
+  align-self: center;
+  white-space: nowrap;
+}
+
+/* ── Avatar ───────────────────────────────────────────────────────────── */
+
+.pp-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border-radius: var(--r-full);
+  background: var(--bone-200);
+  color: var(--ink-500);
+  box-shadow: var(--inset-1);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.pp-avatar--inactive { opacity: 0.55; }
+
+/* ── S2 · Kanban ──────────────────────────────────────────────────────── */
+
+.pp-kanban {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(248px, 1fr);
+  gap: var(--s-4);
+  overflow-x: auto;
+  padding-bottom: var(--s-3);
+}
+
+.pp-kanban__col { display: flex; flex-direction: column; gap: var(--s-3); min-width: 0; }
+
+/* Flush label, per §12 S2 — the column header is not a surface. */
+.pp-kanban__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  padding: 0 var(--s-1);
+  color: var(--ink-400);
+}
+
+.pp-kanban__count { margin-left: auto; font-variant-numeric: tabular-nums; }
+
+.pp-kanban__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-lg);
+  box-shadow: var(--inset-1);
+  min-height: var(--s-9);
+}
+
+.pp-person {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  padding: var(--s-3);
+  text-align: left;
+  border-radius: var(--r-md);
+  box-shadow: var(--clay-2);
+  background: var(--bone-50);
+  cursor: pointer;
+  transition: box-shadow var(--t-base) var(--ease-out), translate var(--t-base) var(--ease-out);
+}
+
+.pp-person:hover { box-shadow: var(--clay-3); translate: 0 -1px; }
+.pp-person:active { box-shadow: var(--clay-1); translate: 0 1px; }
+
+.pp-person__text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pp-person__name { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pp-person__role {
+  margin: 0;
+  color: var(--ink-400);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pp-kanban__empty {
+  color: var(--ink-300);
+  text-align: center;
+  padding: var(--s-4) 0;
+}
+
+/* ── S3 · The employee page ───────────────────────────────────────────── */
+
+.pp-emp__identity {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  margin-bottom: var(--s-5);
+}
+
+.pp-emp__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  margin: var(--s-1) 0 0;
+  color: var(--ink-500);
+}
+
+.pp-emp__sep { color: var(--ink-300); }
+
+/* Four summary wells — CONTRACT · TIME · LEAVE · PAYROLL. */
+.pp-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--s-4);
+  margin-top: var(--s-5);
+}
+
+.pp-summary__well {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  box-shadow: var(--inset-2);
+}
+
+.pp-summary__label {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--ink-400);
+}
+
+/* The smart-button count sits ON the well as a raised chip (§12 S3). */
+.pp-summary__chip {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  padding: 2px var(--s-2);
+  border-radius: var(--r-sm);
+  box-shadow: var(--clay-1);
+  background: var(--bone-50);
+  color: var(--ink-500);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.pp-summary__chip:hover { box-shadow: var(--clay-2); color: var(--ink-900); }
+.pp-summary__chip[disabled] { cursor: default; opacity: 0.6; box-shadow: var(--inset-1); }
+
+.pp-summary__support { margin: 0; color: var(--ink-400); }
+
+/* ── Detail pairs, used by the profile well and the drawers ───────────── */
+
+.pp-pairs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(196px, 1fr));
+  gap: var(--s-4) var(--s-5);
+  padding: var(--s-5);
+}
+
+.pp-pair { display: flex; flex-direction: column; gap: var(--s-1); min-width: 0; }
+.pp-pair__k { color: var(--ink-400); margin: 0; }
+.pp-pair__v { margin: 0; overflow-wrap: anywhere; }
+.pp-pair__v--absent { color: var(--ink-300); }
+
+/* ── Forms ────────────────────────────────────────────────────────────── */
+
+.pp-form { display: grid; gap: var(--s-4); }
+.pp-form__row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-4); }
+.pp-form__legend {
+  margin: var(--s-3) 0 0;
+  color: var(--ink-400);
+}
+
+.pp-form__error {
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-md);
+  box-shadow: var(--inset-1);
+  color: var(--vermilion-500);
+}
+
+/* ── Reference data (departments · job positions) ─────────────────────── */
+
+.pp-ref { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5); }
+.pp-ref__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  margin-bottom: var(--s-3);
+}
+.pp-ref__head h2 { margin: 0; }
+
+@media (max-width: 1180px) {
+  .pp-summary { grid-template-columns: repeat(2, 1fr); }
+  .pp-ref { grid-template-columns: 1fr; }
+  .pp-form__row { grid-template-columns: 1fr; }
+}
