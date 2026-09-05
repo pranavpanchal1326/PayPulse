@@ -15,6 +15,10 @@ class Settings(BaseSettings):
 
     # --- app ---
     APP_NAME: str = "PayPulse"
+    # Every timestamp is stored UTC; this is the zone dates are bucketed in.
+    # A 20:30 UTC check-in is the next calendar day in Kolkata, so getting
+    # this wrong moves attendance into the wrong payroll period.
+    APP_TIMEZONE: str = "Asia/Kolkata"
     API_V1_PREFIX: str = "/api/v1"
     ENV: str = "development"
     DEBUG: bool = True
@@ -47,6 +51,13 @@ class Settings(BaseSettings):
     SMTP_TLS: bool = False
     MAIL_FROM: str = "payroll@paypulse.app"
     MAIL_FROM_NAME: str = "PayPulse Payroll"
+
+    # --- attendance ---
+    # Grace after the scheduled start before a check-in counts as LATE.
+    LATE_GRACE_MINUTES: int = 15
+    # Scheduled days with no attendance row and no approved leave: whether
+    # they reduce pay. See AbsencePolicy.
+    PAYROLL_ABSENCE_POLICY: str = "TREAT_AS_UNPAID"
 
     # --- company (payslip header) ---
     COMPANY_NAME: str = "PayPulse Technologies Pvt. Ltd."

@@ -26,6 +26,7 @@ from app.core.enums import EmployeeStatus, EmployeeType
 from app.db.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
+    from app.models.attendance import Attendance
     from app.models.contract import Contract
     from app.models.organization import Department, JobPosition
     from app.models.schedule import WorkingSchedule
@@ -107,6 +108,11 @@ class Employee(Base, TimestampMixin):
         back_populates="employee",
         cascade="all, delete-orphan",
         order_by="Contract.date_start.desc()",
+    )
+    attendances: Mapped[list[Attendance]] = relationship(
+        back_populates="employee",
+        cascade="all, delete-orphan",
+        order_by="Attendance.work_date.desc()",
     )
 
     @property

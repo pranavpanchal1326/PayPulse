@@ -17,7 +17,8 @@ Run with:  docker compose exec api python -m app.db.seed
 from __future__ import annotations
 
 import logging
-from datetime import date, time
+import random
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -25,13 +26,21 @@ from sqlalchemy.orm import Session
 
 from app.core.enums import ContractState, EmployeeType, Role
 from app.core.security import hash_password
+from app.models.attendance import Attendance
 from app.models.contract import Contract
 from app.models.employee import Employee
 from app.models.holiday import PublicHoliday
 from app.models.organization import Department, JobPosition
 from app.models.schedule import WorkingSchedule, WorkingScheduleLine
 from app.models.user import User
-from app.services import employee_service, schedule_calc
+from app.services import (
+    attendance_service,
+    employee_service,
+    schedule_calc,
+)
+from app.services import (
+    calendar as calendar_service,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger("seed")
@@ -186,6 +195,23 @@ SEED_HOLIDAYS: list[tuple[date, str, bool]] = [
     (date(2026, 11, 24), "Guru Nanak Jayanti (approx)", False),
     (date(2026, 12, 25), "Christmas Day", False),    # Friday
 ]
+
+
+# Attendance is seeded over a ROLLING window ending yesterday rather than
+# fixed dates: attendance dated in the future is invalid (the API rejects
+# it), so a hardcoded window would rot within days. The exception pattern is
+# seeded from a fixed RNG seed, so the *shape* of the data - which days are
+# late, absent, or missing a check-out - is identical on every run.
+ATTENDANCE_DAYS = 60
+ATTENDANCE_RNG_SEED = 20260101
+
+# Deliberate exception rates, so the dashboard has something to report and
+# absent_days is non-zero (PRD section 9).
+P_ABSENT = 0.06
+P_LATE = 0.10
+P_MISSING_CHECKOUT = 0.04
+P_OVERTIME = 0.12
+P_MANUAL_EDIT = 0.03
 
 
 def seed_users(db: Session) -> None:
@@ -363,6 +389,97 @@ def seed_holidays(db: Session) -> None:
     )
 
 
+def seed_attendance(db: Session, employees: dict[str, Employee]) -> None:
+    rng = random.Random(ATTENDANCE_RNG_SEED)
+    today = date.today()
+    window_end = today - timedelta(days=1)
+    window_start = window_end - timedelta(days=ATTENDANCE_DAYS - 1)
+
+    holidays = calendar_service.holiday_dates(db, window_start, window_end)
+    admin = db.scalar(select(User).where(User.email == "admin@paypulse.app"))
+
+    created = skipped = 0
+    counts = {"LATE": 0, "MISSING_CHECKOUT": 0, "OVERTIME": 0, "manual": 0}
+
+    for employee in employees.values():
+        schedule = employee.working_schedule
+        if schedule is None:
+            continue
+        daily = schedule_calc.daily_hours(schedule.lines)
+        work_days = calendar_service.working_dates(
+            schedule.lines, window_start, window_end, holidays
+        )
+
+        for day in work_days:
+            if day < employee.date_of_joining:
+                continue
+            if rng.random() < P_ABSENT:
+                skipped += 1  # a deliberate gap -> derived absence
+                continue
+
+            existing = db.scalar(
+                select(Attendance).where(
+                    Attendance.employee_id == employee.id,
+                    Attendance.work_date == day,
+                )
+            )
+            if existing is not None:
+                continue
+
+            start = attendance_service.scheduled_start_for(schedule, day)
+            late_by = rng.randint(25, 75) if rng.random() < P_LATE else 0
+            check_in = datetime.combine(
+                day, start, tzinfo=attendance_service.app_timezone()
+            ) + timedelta(minutes=late_by)
+
+            if rng.random() < P_MISSING_CHECKOUT:
+                check_out = None
+            else:
+                extra = rng.randint(60, 180) if rng.random() < P_OVERTIME else 0
+                check_out = check_in + timedelta(
+                    hours=float(daily), minutes=60 + extra
+                )
+
+            row = Attendance(
+                employee_id=employee.id,
+                check_in=check_in.astimezone(UTC),
+                check_out=(
+                    check_out.astimezone(UTC) if check_out else None
+                ),
+                break_minutes=60,
+            )
+            # Same code path the API uses - nothing here is hardcoded.
+            attendance_service.recompute(row, schedule, daily)
+            row.is_holiday = row.work_date in holidays
+
+            if rng.random() < P_MANUAL_EDIT:
+                row.is_manual_edit = True
+                row.edited_by_id = admin.id if admin else None
+                row.edit_reason = "Corrected after employee reported a missed swipe"
+                counts["manual"] += 1
+
+            if row.status.value in counts:
+                counts[row.status.value] += 1
+            db.add(row)
+            created += 1
+
+    db.flush()
+    logger.info(
+        "  attendance         %d rows over %d days (%d gaps -> derived absence)",
+        created,
+        ATTENDANCE_DAYS,
+        skipped,
+    )
+    logger.info(
+        "                     %d late, %d missing check-out, %d overtime, "
+        "%d manual edits",
+        counts["LATE"],
+        counts["MISSING_CHECKOUT"],
+        counts["OVERTIME"],
+        counts["manual"],
+    )
+
+
 def main() -> None:
     # Imported lazily so the module-level fixtures can be introspected by
     # tests without constructing an engine (and therefore needing psycopg).
@@ -377,6 +494,7 @@ def main() -> None:
         employees = seed_employees(db, departments, positions, schedules)
         seed_contracts(db, employees)
         seed_holidays(db)
+        seed_attendance(db, employees)
         db.commit()
     logger.info("Done. All demo accounts use the password: %s", DEMO_PASSWORD)
 

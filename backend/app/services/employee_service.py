@@ -154,8 +154,17 @@ def _contract_source():
     return Contract, Contract.employee_id
 
 
+def _attendance_source():
+    try:
+        from app.models.attendance import Attendance
+    except ImportError:
+        return None, None
+    return Attendance, Attendance.employee_id
+
+
 # Populated as each block lands. Keeping the wiring declarative means adding a
 # module is one line here rather than an edit to summary_counts itself.
 _SUMMARY_SOURCES = {
     "contracts": _contract_source,
+    "attendances": _attendance_source,
 }

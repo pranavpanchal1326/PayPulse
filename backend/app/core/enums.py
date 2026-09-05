@@ -35,11 +35,30 @@ class ContractState(StrEnum):
 
 
 class AttendanceStatus(StrEnum):
+    """Status of an attendance ROW.
+
+    There is deliberately no ABSENT member. Absence is the *absence of a
+    row*, so it cannot be a property of one; it is derived against the
+    schedule in services/attendance_service.py and reported as a count
+    (PRD section 3.4). The brief wants "Absent" on the dashboard (B9),
+    which the derived figure supplies.
+    """
+
     PRESENT = "PRESENT"
     LATE = "LATE"
-    ABSENT = "ABSENT"
     OVERTIME = "OVERTIME"
     MISSING_CHECKOUT = "MISSING_CHECKOUT"
+
+
+class AbsencePolicy(StrEnum):
+    """Whether a scheduled day with no attendance and no leave costs pay.
+
+    PRD section 4.1: PayPulse is schedule-anchored with attendance-derived
+    absence. Configurable so both readings can be shown on stage.
+    """
+
+    TREAT_AS_UNPAID = "TREAT_AS_UNPAID"
+    IGNORE = "IGNORE"
 
 
 class LeaveUnit(StrEnum):
