@@ -92,9 +92,6 @@ category totals accumulate already-rounded amounts, so `sum(lines) == net`.
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | You want to know how a payslip gets computed |
 | [docs/API.md](docs/API.md) | You are calling the API |
 | [docs/RUNBOOK.md](docs/RUNBOOK.md) | You are running, seeding, resetting or demoing it |
-| [docs/PRD.md](docs/PRD.md) | You want the full system design and the reasoning |
-| [docs/DESIGN-BLUEPRINT.md](docs/DESIGN-BLUEPRINT.md) | You are working on the frontend's visual system |
-| [docs/BUILD-PLAN.md](docs/BUILD-PLAN.md) | You want the phase-by-phase build record |
 
 ---
 

@@ -1,7 +1,7 @@
 # Architecture
 
 How PayPulse is put together, and why the interesting parts are shaped the way
-they are. For the full design reasoning see [PRD.md](PRD.md); this is the map.
+they are.
 
 ---
 
