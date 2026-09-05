@@ -1,7 +1,7 @@
 [project]
-name = "peoplepay360-backend"
+name = "paypulse-backend"
 version = "0.1.0"
-description = "PeoplePay360 - integrated HR & Payroll platform API"
+description = "PayPulse - integrated HR & Payroll platform API"
 requires-python = ">=3.12"
 
 dependencies = [

@@ -1,8 +1,8 @@
 """The permission matrix, asserted against page 3 of the problem statement."""
 import pytest
 
-from app.core.rbac import MATRIX, Action, Resource, Scope, has_permission, scope_for
 from app.core.enums import Role
+from app.core.rbac import MATRIX, Action, Resource, Scope, has_permission, scope_for
 
 PAYROLL_RESOURCES = [
     Resource.PAYRUN,

@@ -1,0 +1,115 @@
+"""The Employee - the hub every other record hangs off.
+
+`date_of_joining` and `date_of_exit` are load-bearing rather than decorative:
+they bound `contract_days` in the payroll engine (PRD section 4.2), which is
+what makes a joiner on the 20th and a leaver on the 10th prorate correctly
+instead of each being paid a full month.
+"""
+from __future__ import annotations
+
+from datetime import date
+from typing import TYPE_CHECKING
+
+from sqlalchemy import (
+    CheckConstraint,
+    Date,
+    ForeignKey,
+    Integer,
+    String,
+)
+from sqlalchemy import (
+    Enum as SAEnum,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.core.enums import EmployeeStatus, EmployeeType
+from app.db.base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.organization import Department, JobPosition
+    from app.models.schedule import WorkingSchedule
+
+
+class Employee(Base, TimestampMixin):
+    __tablename__ = "employee"
+    __table_args__ = (
+        CheckConstraint(
+            "date_of_exit IS NULL OR date_of_exit >= date_of_joining",
+            name="ck_employee_exit_after_joining",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    # --- identity ---
+    first_name: Mapped[str] = mapped_column(String(80))
+    last_name: Mapped[str] = mapped_column(String(80))
+    work_email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    phone: Mapped[str | None] = mapped_column(String(32), nullable=True)
+
+    # --- job ---
+    department_id: Mapped[int | None] = mapped_column(
+        ForeignKey("department.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    job_position_id: Mapped[int | None] = mapped_column(
+        ForeignKey("job_position.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    working_schedule_id: Mapped[int | None] = mapped_column(
+        ForeignKey("working_schedule.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    # Required by the brief (A1, B2: "department, manager, schedule, job
+    # position"). Also powers ?scope=my_team.
+    manager_id: Mapped[int | None] = mapped_column(
+        ForeignKey("employee.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    employee_type: Mapped[EmployeeType] = mapped_column(
+        SAEnum(
+            EmployeeType, name="employee_type_enum", native_enum=False, length=32
+        ),
+        default=EmployeeType.FULL_TIME,
+        index=True,
+    )
+
+    # --- lifecycle ---
+    date_of_joining: Mapped[date] = mapped_column(Date, nullable=False)
+    date_of_exit: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # Derived from date_of_exit on every write (see services.employee_service);
+    # stored so list filtering stays a plain indexed predicate.
+    status: Mapped[EmployeeStatus] = mapped_column(
+        SAEnum(
+            EmployeeStatus, name="employee_status_enum", native_enum=False, length=32
+        ),
+        default=EmployeeStatus.ACTIVE,
+        index=True,
+    )
+
+    # --- payout details ---
+    # Emptiness here is what raises MISSING_BANK_DETAILS at mark-paid (B7).
+    bank_account: Mapped[str | None] = mapped_column(String(34), nullable=True)
+    bank_ifsc: Mapped[str | None] = mapped_column(String(11), nullable=True)
+
+    # --- relationships ---
+    department: Mapped[Department | None] = relationship(back_populates="employees")
+    job_position: Mapped[JobPosition | None] = relationship(
+        back_populates="employees"
+    )
+    working_schedule: Mapped[WorkingSchedule | None] = relationship(
+        back_populates="employees"
+    )
+    manager: Mapped[Employee | None] = relationship(
+        remote_side="Employee.id", back_populates="reports"
+    )
+    reports: Mapped[list[Employee]] = relationship(back_populates="manager")
+
+    @property
+    def full_name(self) -> str:
+        return f"{self.first_name} {self.last_name}".strip()
+
+    @property
+    def has_bank_details(self) -> bool:
+        return bool(self.bank_account and self.bank_ifsc)
+
+    def __repr__(self) -> str:  # pragma: no cover - debug helper
+        return f"<Employee {self.id} {self.full_name}>"

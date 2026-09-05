@@ -19,7 +19,7 @@ logging.basicConfig(
     format='{"ts":"%(asctime)s","level":"%(levelname)s",'
     '"logger":"%(name)s","msg":"%(message)s"}',
 )
-logger = logging.getLogger("peoplepay360")
+logger = logging.getLogger("paypulse")
 
 app = FastAPI(
     title=f"{settings.APP_NAME} API",

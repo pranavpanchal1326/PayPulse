@@ -53,7 +53,7 @@ services:
       # Bind mount for --reload. The anonymous volume keeps the image's
       # installed egg-info from being shadowed by the host directory.
       - ./backend:/app
-      - /app/peoplepay360_backend.egg-info
+      - /app/paypulse_backend.egg-info
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8000/healthz"]
       interval: 10s

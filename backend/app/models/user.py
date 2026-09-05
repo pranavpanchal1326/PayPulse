@@ -1,11 +1,12 @@
 """Authentication principal. The HR identity lives on Employee (B1)."""
 from __future__ import annotations
 
-from sqlalchemy import Boolean, Enum as SAEnum, Integer, String
+from sqlalchemy import Boolean, Integer, String
+from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, TimestampMixin
 from app.core.enums import Role
+from app.db.base import Base, TimestampMixin
 
 
 class User(Base, TimestampMixin):

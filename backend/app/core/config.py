@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     )
 
     # --- app ---
-    APP_NAME: str = "PeoplePay360"
+    APP_NAME: str = "PayPulse"
     API_V1_PREFIX: str = "/api/v1"
     ENV: str = "development"
     DEBUG: bool = True
@@ -45,11 +45,11 @@ class Settings(BaseSettings):
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
     SMTP_TLS: bool = False
-    MAIL_FROM: str = "payroll@peoplepay360.com"
-    MAIL_FROM_NAME: str = "PeoplePay360 Payroll"
+    MAIL_FROM: str = "payroll@paypulse.app"
+    MAIL_FROM_NAME: str = "PayPulse Payroll"
 
     # --- company (payslip header) ---
-    COMPANY_NAME: str = "PeoplePay360 Technologies Pvt. Ltd."
+    COMPANY_NAME: str = "PayPulse Technologies Pvt. Ltd."
     CURRENCY: str = "INR"
     CURRENCY_SYMBOL: str = "\u20b9"
 

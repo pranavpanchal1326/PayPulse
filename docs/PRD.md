@@ -1,8 +1,12 @@
-# PeoplePay360 — System Design & PRD
+# PayPulse — System Design & PRD
+
+> **PayPulse** is our product name. **PeoplePay360** is the name of the hackathon
+> brief we are building against; it appears throughout this document only when
+> quoting or citing that brief.
 
 **Version 3.0** · supersedes v2 and v1 (v1 archived at `docs/PRD-v1.md`, git `b618137`)
 Team: **Aditya** (backend) · **Pranav** (frontend) · Odoo Hackathon · ~36–48h build window
-Status: **B0 shipped** (scaffold, Compose, JWT, RBAC matrix — commit `99bfacc`). B1 onward open.
+Status: **B0 + B1 shipped.** B0 = scaffold, Compose, JWT, RBAC matrix (`99bfacc`). B1 = departments, job positions, working schedules with computed hours, and the Employee hub with manager/joining/exit and `/employees/{id}/summary`. B2 onward open.
 
 ---
 
@@ -802,7 +806,7 @@ Pranav then builds against **MSW mocks** derived from those types. **Result: Pra
 | # | Block | Hrs | Notes |
 |---|---|---|---|
 | ~~B0~~ | ~~Scaffold, Compose, config, JWT auth, RBAC matrix~~ | ~~4~~ | ✅ **shipped** (`99bfacc`) |
-| B1 | Employee (+manager, joining/exit), Department, JobPosition, WorkingSchedule + hours computation | 4 | `/employees/{id}/summary` |
+| ~~B1~~ | ~~Employee (+manager, joining/exit), Department, JobPosition, WorkingSchedule + hours computation~~ | ~~4~~ | ✅ **shipped** — `/employees/{id}/summary` live |
 | B2 | Contract + exclusion constraint + `contract_resolver` (**single contract + warning**) | 2.5 | unit-test with an adjacent pair |
 | B2.5 | **`calendar.py`** — holidays + `period_days` / `contract_days` | 1.5 | ⭐ every day number comes from here |
 | B3 | Attendance + derived status + `worked_hours` (midnight-safe) + manual-edit fields | 3 | drop `ABSENT` from the enum |
@@ -980,9 +984,13 @@ docker compose exec api pytest -v
 
 ## 13. Repository Layout
 
-Canonical product name: **PeoplePay360** — this is the name the brief uses and the only one that should appear in the UI, the payslip PDF, or the demo.
+Canonical product name: **PayPulse** — decided, and the only name that appears in the UI, the API title, the payslip PDF, or the demo. It already matches the GitHub remote (`pranavpanchal1326/PayPulse`).
 
-> **Naming inconsistency, unresolved.** The GitHub remote is `pranavpanchal1326/PayPulse`, the local working directory is `Odoo Hackathon`, and every document says PeoplePay360. Harmless for judging (nobody sees the repo name), but **Aditya and Pranav should agree on one** before the README is written. Renaming the GitHub repo is a two-click operation and GitHub redirects the old URL, so the cheapest fix is to rename the remote to `peoplepay360` and leave everything else alone.
+Applied in B1: `APP_NAME`, the OpenAPI title, `COMPANY_NAME`, the mail sender, the log channel, the Python package name, and every seeded demo account (`*@paypulse.app`, password `paypulse`).
+
+**Deliberately left alone**, because they are invisible to judges and renaming them would orphan the existing Postgres volume mid-hackathon: the Compose project name (`peoplepay360`), the database name, and the DB user. Worth doing in the post-hackathon cleanup, not now.
+
+*The hackathon brief is titled "PeoplePay360 HR & Payroll". Building a product under our own name is normal and expected; the brief is the requirement, not the branding.*
 
 ```
 peoplepay360/
@@ -1044,9 +1052,9 @@ The brief requires this as a deliverable: *"Brief summary of proposed enhancemen
 
 ## 15. Next Actions
 
-B0 is shipped. In order:
+B0 and B1 are shipped. In order:
 
-1. **B1** — Employee (with `manager_id`, `date_of_joining`, `date_of_exit`), Department, JobPosition, WorkingSchedule + computed hours; `/employees/{id}/summary`
+1. ~~**B1** — Employee, Department, JobPosition, WorkingSchedule + computed hours; `/employees/{id}/summary`~~ ✅
 2. **B2 + B2.5** — Contract with the exclusion constraint, `contract_resolver` returning a **single** contract plus a `MULTI_CONTRACT_PERIOD` warning, and `calendar.py` with the holiday table. **Both unit-tested by T+14h** — every number in the product is downstream of these.
 3. Drop `AttendanceStatus.ABSENT` from `app/core/enums.py`; add `AbsencePolicy`
 4. Publish the updated `openapi.json` and ping Pranav with the §5 deltas (balances `pending`, payrun `reopen`/`cancel`, role-filtered dashboard, `?scope=my_team`)
