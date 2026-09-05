@@ -67,9 +67,6 @@ services:
       - "5173:5173"
     environment:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
-      # live by default: the backend is complete, so the fixtures would only
-      # hide integration bugs. Set to `mock` to work on the UI with no stack.
-      VITE_API_MODE: ${VITE_API_MODE:-live}
     volumes:
       - ./frontend:/app
       - /app/node_modules

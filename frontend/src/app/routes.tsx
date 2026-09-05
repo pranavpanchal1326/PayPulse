@@ -22,16 +22,6 @@ import { ProvingGround } from "@/proving/ProvingGround";
 import { DevChrome } from "./DevChrome";
 
 /**
- * The P4 showcase drives every signature system from the **P3 fixture
- * dataset**, so a static import would pull thirty employees and three thousand
- * attendance rows into the production bundle for the sake of a dev route.
- * Lazy, and it stays in its own chunk.
- */
-const SignatureShowcase = lazy(() =>
-  import("@/signature/Showcase").then((m) => ({ default: m.SignatureShowcase })),
-);
-
-/**
  * **Payroll and Reports are split out.** Not for the sake of a smaller number:
  * two of the five roles cannot open either of them, and a `HR_MANAGER` should
  * not download the payrun cockpit, the rule editor, the payslip renderer and
@@ -96,14 +86,6 @@ export const router = createBrowserRouter([
     children: [
       { path: "/dev/gallery", element: <Gallery /> },
       { path: "/dev/material", element: <ProvingGround /> },
-      {
-        path: "/dev/signature",
-        element: (
-          <Suspense fallback={<Booting />}>
-            <SignatureShowcase />
-          </Suspense>
-        ),
-      },
     ],
   },
   {
