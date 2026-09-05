@@ -44,6 +44,7 @@ _LOADERS = (
 def _to_out(employee: Employee) -> EmployeeOut:
     return EmployeeOut(
         id=employee.id,
+        employee_number=employee.employee_number,
         first_name=employee.first_name,
         last_name=employee.last_name,
         full_name=employee.full_name,
