@@ -111,11 +111,6 @@ class Attendance(Base, TimestampMixin):
     employee: Mapped[Employee] = relationship(back_populates="attendances")
     edited_by: Mapped[User | None] = relationship()
 
-    @property
-    def is_open(self) -> bool:
-        """Checked in but never checked out."""
-        return self.check_out is None
-
     def __repr__(self) -> str:  # pragma: no cover - debug helper
         return (
             f"<Attendance {self.employee_id} {self.work_date} "

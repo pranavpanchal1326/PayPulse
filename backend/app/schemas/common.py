@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Generic, TypeVar
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 T = TypeVar("T")
 
@@ -27,11 +27,3 @@ class Page(BaseModel, Generic[T]):
 
 class Message(BaseModel):
     message: str
-
-
-class ErrorResponse(BaseModel):
-    """Documents the error envelope in OpenAPI so Pranav can type against it."""
-
-    code: str = Field(examples=["not_found"])
-    message: str
-    field_errors: list[dict] = []

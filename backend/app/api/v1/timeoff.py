@@ -36,7 +36,7 @@ from app.schemas.timeoff import (
     TimeOffTypeOut,
     TimeOffTypeUpdate,
 )
-from app.services import leave_engine
+from app.services import leave_engine, payrun_service
 
 router = APIRouter(prefix="/time-off", tags=["time off"])
 
@@ -404,7 +404,7 @@ def approve_request(
 ) -> TimeOffRequestOut:
     """Approval is what consumes the balance - and is refused if it would
     overdraw it (PRD section 3.6)."""
-    row = db.get(TimeOffRequest, request_id)
+    row = db.get(TimeOffRequest, request_id, with_for_update=True)
     if row is None:
         raise NotFoundError(f"Request {request_id} not found")
     if row.state is RequestState.APPROVED:
@@ -429,12 +429,20 @@ def approve_request(
 def refuse_request(
     request_id: int, payload: DecisionRequest, db: DbSession, ctx: req_approve
 ) -> TimeOffRequestOut:
-    row = db.get(TimeOffRequest, request_id)
+    row = db.get(TimeOffRequest, request_id, with_for_update=True)
     if row is None:
         raise NotFoundError(f"Request {request_id} not found")
     if row.state is RequestState.CANCELLED:
         raise ConflictError(
             "A cancelled request cannot be refused.", code="invalid_transition"
+        )
+    if row.state is RequestState.REFUSED:
+        raise ConflictError("Already refused", code="already_refused")
+    if row.state is RequestState.APPROVED:
+        # Refusing an approved request retracts leave that payroll may have
+        # already consumed, so it is only allowed while the period is open.
+        payrun_service.assert_period_not_paid(
+            db, row.employee_id, row.date_from, row.date_to, "This leave"
         )
     row.state = RequestState.REFUSED
     row.approver_id = ctx.user.id
@@ -450,17 +458,20 @@ def cancel_request(
 ) -> TimeOffRequestOut:
     """Cancel a request, restoring the balance if it had been approved.
 
-    PRD section 3.6 also refuses cancellation once the period has been PAID,
-    since paid payroll is immutable. That guard needs payslips and lands
-    with B7; until then there is nothing paid to protect.
+    PRD section 3.6 refuses cancellation once the period has been PAID, since
+    paid payroll is immutable.
     """
-    row = db.get(TimeOffRequest, request_id)
+    row = db.get(TimeOffRequest, request_id, with_for_update=True)
     if row is None:
         raise NotFoundError(f"Request {request_id} not found")
     if ctx.employee_filter is not None and row.employee_id != ctx.employee_filter:
         raise PermissionDeniedError("You may only cancel your own requests")
     if row.state is RequestState.CANCELLED:
         raise ConflictError("Already cancelled", code="already_cancelled")
+    if row.state is RequestState.APPROVED:
+        payrun_service.assert_period_not_paid(
+            db, row.employee_id, row.date_from, row.date_to, "This leave"
+        )
 
     row.state = RequestState.CANCELLED
     db.commit()

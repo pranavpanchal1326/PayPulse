@@ -70,15 +70,6 @@ class ComputedPayslip:
     net: Decimal = Decimal("0.00")
 
     @property
-    def is_blocked(self) -> bool:
-        blocking = {
-            WarningCode.NO_ACTIVE_CONTRACT,
-            WarningCode.OVERLAPPING_CONTRACTS,
-            WarningCode.NO_STRUCTURE_RULES,
-        }
-        return any(w.code in blocking for w in self.warnings)
-
-    @property
     def visible_lines(self) -> list[ComputedLine]:
         return [line for line in self.lines if line.appears_on_payslip]
 

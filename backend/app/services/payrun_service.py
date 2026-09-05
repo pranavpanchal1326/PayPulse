@@ -20,14 +20,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.enums import (
-    ContractState,
     EmployeeStatus,
     PayrunState,
     PayslipState,
     WarningCode,
 )
 from app.core.errors import BusinessRuleError, ConflictError
-from app.models.contract import Contract
 from app.models.employee import Employee
 from app.models.payroll import Payrun, Payslip, PayslipLine
 from app.models.salary import SalaryStructure
@@ -210,6 +208,42 @@ def create(
         )
     db.flush()
     return payrun
+
+
+def paid_payslip_covering(
+    db: Session, employee_id: int, date_from: date, date_to: date
+) -> Payslip | None:
+    """A PAID payslip whose period overlaps [date_from, date_to], if any.
+
+    Paid payroll is a historical record (PRD section 4.7), and `compute`
+    refuses to run on a PAID payrun. That guard only protects the payrun
+    itself - the attendance and leave rows a payslip was derived from stayed
+    editable, so a correction after payment left the payslip's stored numbers
+    unreproducible from its own inputs, with no way to reconcile them.
+    Mutations of those inputs check here first.
+    """
+    return db.scalar(
+        select(Payslip).where(
+            Payslip.employee_id == employee_id,
+            Payslip.state == PayslipState.PAID,
+            Payslip.period_start <= date_to,
+            Payslip.period_end >= date_from,
+        )
+    )
+
+
+def assert_period_not_paid(
+    db: Session, employee_id: int, date_from: date, date_to: date, what: str
+) -> None:
+    """Refuse a change to payroll input that a PAID payslip already consumed."""
+    payslip = paid_payslip_covering(db, employee_id, date_from, date_to)
+    if payslip is not None:
+        raise ConflictError(
+            f"{what} falls in {payslip.period_start} to {payslip.period_end}, "
+            "which has already been paid. Paid payroll is preserved as a "
+            "historical record and its inputs cannot be changed.",
+            code="period_already_paid",
+        )
 
 
 def compute(db: Session, payrun: Payrun) -> Payrun:
@@ -424,39 +458,3 @@ def cancel(db: Session, payrun: Payrun) -> Payrun:
         payslip.state = PayslipState.CANCELLED
     db.flush()
     return payrun
-
-
-def structure_is_locked(db: Session, structure_id: int) -> bool:
-    """Whether a structure is referenced by a finalized payrun.
-
-    Rules stay editable while payruns are DRAFT/COMPUTED - that is the
-    scored behaviour (edit HRA, recompute, watch net move). A finalized
-    payrun simply cannot be recomputed, so its payslips are safe either way.
-    """
-    return bool(
-        db.scalar(
-            select(Payrun.id).where(
-                Payrun.salary_structure_id == structure_id,
-                Payrun.state.in_((PayrunState.VALIDATED, PayrunState.PAID)),
-            )
-        )
-    )
-
-
-def contract_in_use(db: Session, contract_id: int) -> bool:
-    return bool(
-        db.scalar(select(Payslip.id).where(Payslip.contract_id == contract_id))
-    )
-
-
-def running_contract_count(db: Session, employee_id: int) -> int:
-    return len(
-        list(
-            db.scalars(
-                select(Contract.id).where(
-                    Contract.employee_id == employee_id,
-                    Contract.state == ContractState.RUNNING,
-                )
-            )
-        )
-    )

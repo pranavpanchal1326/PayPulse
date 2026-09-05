@@ -42,6 +42,7 @@ from app.services import (
     calendar,
     contract_resolver,
     leave_engine,
+    payrun_service,
     schedule_calc,
 )
 
@@ -356,6 +357,13 @@ def correct_attendance(
     row = db.get(Attendance, attendance_id)
     if row is None:
         raise NotFoundError(f"Attendance {attendance_id} not found")
+    # This row is a payroll input. Once a payslip covering its date is PAID,
+    # editing it would leave that payslip's stored numbers unreproducible
+    # from their own inputs, and `compute` refuses to run on a PAID payrun
+    # so the divergence could never be reconciled.
+    payrun_service.assert_period_not_paid(
+        db, row.employee_id, row.work_date, row.work_date, "This attendance record"
+    )
     employee = db.get(Employee, row.employee_id)
 
     data = payload.model_dump(exclude_unset=True)

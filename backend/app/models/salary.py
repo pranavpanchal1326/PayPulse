@@ -56,10 +56,6 @@ class SalaryStructure(Base, TimestampMixin):
         lazy="selectin",
     )
 
-    @property
-    def active_rules(self) -> list[SalaryRule]:
-        return [r for r in self.rules if r.is_active]
-
     def __repr__(self) -> str:  # pragma: no cover - debug helper
         return f"<SalaryStructure {self.code} rules={len(self.rules)}>"
 

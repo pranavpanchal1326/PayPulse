@@ -26,13 +26,13 @@ BASE = (
 # auto-detection on every call, which hangs for minutes here.
 opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
-PASSWORD = "peoplepay"
+PASSWORD = "paypulse"
 ACCOUNTS = [
-    ("admin@peoplepay360.com", "ADMIN"),
-    ("payroll.manager@peoplepay360.com", "HR_PAYROLL_MANAGER"),
-    ("payroll.user@peoplepay360.com", "HR_PAYROLL_USER"),
-    ("hr.manager@peoplepay360.com", "HR_MANAGER"),
-    ("employee@peoplepay360.com", "EMPLOYEE"),
+    ("admin@paypulse.app", "ADMIN"),
+    ("payroll.manager@paypulse.app", "HR_PAYROLL_MANAGER"),
+    ("payroll.user@paypulse.app", "HR_PAYROLL_USER"),
+    ("hr.manager@paypulse.app", "HR_MANAGER"),
+    ("employee@paypulse.app", "EMPLOYEE"),
 ]
 
 ok = fail = 0
@@ -76,7 +76,7 @@ def main() -> int:
 
     print("\nlogin")
     s, b = call("POST", "/api/v1/auth/login",
-                {"email": "admin@peoplepay360.com", "password": PASSWORD})
+                {"email": "admin@paypulse.app", "password": PASSWORD})
     check("admin login 200", s == 200, b)
     check("returns access+refresh+user",
           {"access_token", "refresh_token", "user"} <= set(b), list(b))
@@ -84,7 +84,7 @@ def main() -> int:
     access, refresh = b.get("access_token"), b.get("refresh_token")
 
     s, b = call("POST", "/api/v1/auth/login",
-                {"email": "admin@peoplepay360.com", "password": "wrong"})
+                {"email": "admin@paypulse.app", "password": "wrong"})
     check("wrong password 401", s == 401, (s, b))
     check("error envelope carries code", b.get("code") == "unauthenticated", b)
 
@@ -100,7 +100,7 @@ def main() -> int:
     print("\n/me")
     s, b = call("GET", "/api/v1/auth/me", token=access)
     check("with token 200", s == 200, b)
-    check("returns the admin", b.get("email") == "admin@peoplepay360.com", b)
+    check("returns the admin", b.get("email") == "admin@paypulse.app", b)
     check("no token 401", call("GET", "/api/v1/auth/me")[0] == 401)
     check("garbage token 401",
           call("GET", "/api/v1/auth/me", token="garbage.token.x")[0] == 401)

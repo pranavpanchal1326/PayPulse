@@ -43,12 +43,3 @@ class JobPositionOut(BaseModel):
     department_id: int | None = None
     department_name: str | None = None
     employee_count: int = 0
-
-
-class RefOut(BaseModel):
-    """Minimal {id, name} shape for embedding in other payloads."""
-
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    name: str

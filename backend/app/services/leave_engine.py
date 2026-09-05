@@ -259,6 +259,23 @@ def assert_within_balance(
     """
     if not type_.requires_allocation:
         return
+
+    # Serialize concurrent approvals for this employee and type. The check
+    # below is check-then-act on a balance derived from these rows, so two
+    # approvals racing here would both see the same remaining days and both
+    # commit, overdrawing the allocation this function exists to protect.
+    # An employee with no allocation rows locks nothing, but their remaining
+    # balance is zero, so no approval can succeed anyway.
+    db.execute(
+        select(LeaveAllocation.id)
+        .where(
+            LeaveAllocation.employee_id == request.employee_id,
+            LeaveAllocation.time_off_type_id == type_.id,
+            LeaveAllocation.state == RequestState.APPROVED,
+        )
+        .with_for_update()
+    )
+
     balance = balance_for(db, request.employee_id, type_.id, request.date_from)
     if balance is None:
         return

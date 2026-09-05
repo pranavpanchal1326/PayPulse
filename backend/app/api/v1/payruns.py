@@ -189,8 +189,18 @@ def _payslip_out(db: Session, payslip: Payslip) -> PayslipOut:
     )
 
 
-def _get_payrun(db: Session, payrun_id: int) -> Payrun:
-    payrun = db.get(Payrun, payrun_id)
+def _get_payrun(
+    db: Session, payrun_id: int, *, for_update: bool = False
+) -> Payrun:
+    """Load a payrun, optionally taking a row lock.
+
+    Every state transition passes `for_update=True`. Without it the guards in
+    `payrun_service` are check-then-act: two concurrent mark-paid requests
+    both read VALIDATED, both pass, and the batch is paid - and emailed -
+    twice. The lock is held to the end of the request's transaction, so the
+    second caller reads the state the first one committed and gets a 409.
+    """
+    payrun = db.get(Payrun, payrun_id, with_for_update=for_update)
     if payrun is None:
         raise NotFoundError(f"Payrun {payrun_id} not found")
     return payrun
@@ -314,7 +324,7 @@ def payrun_warnings(
 def compute_payrun(
     payrun_id: int, db: DbSession, _: run_update
 ) -> PayrunDetailOut:
-    payrun = _get_payrun(db, payrun_id)
+    payrun = _get_payrun(db, payrun_id, for_update=True)
     payrun_service.compute(db, payrun)
     db.commit()
     db.refresh(payrun)
@@ -325,7 +335,7 @@ def compute_payrun(
 def validate_payrun(
     payrun_id: int, db: DbSession, _: run_update
 ) -> PayrunDetailOut:
-    payrun = _get_payrun(db, payrun_id)
+    payrun = _get_payrun(db, payrun_id, for_update=True)
     payrun_service.validate(db, payrun)
     db.commit()
     db.refresh(payrun)
@@ -336,7 +346,7 @@ def validate_payrun(
 def mark_paid(
     payrun_id: int, payload: MarkPaidRequest, db: DbSession, ctx: run_update
 ) -> PayrunDetailOut:
-    payrun = _get_payrun(db, payrun_id)
+    payrun = _get_payrun(db, payrun_id, for_update=True)
     payrun_service.mark_paid(
         db, payrun, ctx.user.id, payload.force, payload.force_paid_reason
     )
@@ -347,7 +357,7 @@ def mark_paid(
 
 @router.post("/payruns/{payrun_id}/reopen", response_model=PayrunDetailOut)
 def reopen_payrun(payrun_id: int, db: DbSession, _: run_update) -> PayrunDetailOut:
-    payrun = _get_payrun(db, payrun_id)
+    payrun = _get_payrun(db, payrun_id, for_update=True)
     payrun_service.reopen(db, payrun)
     db.commit()
     db.refresh(payrun)
@@ -356,7 +366,7 @@ def reopen_payrun(payrun_id: int, db: DbSession, _: run_update) -> PayrunDetailO
 
 @router.post("/payruns/{payrun_id}/cancel", response_model=PayrunDetailOut)
 def cancel_payrun(payrun_id: int, db: DbSession, _: run_update) -> PayrunDetailOut:
-    payrun = _get_payrun(db, payrun_id)
+    payrun = _get_payrun(db, payrun_id, for_update=True)
     payrun_service.cancel(db, payrun)
     db.commit()
     db.refresh(payrun)
@@ -378,7 +388,7 @@ def send_payslips(
     Queued on BackgroundTasks so a 30-payslip send does not hold the request
     open on stage.
     """
-    payrun = _get_payrun(db, payrun_id)
+    payrun = _get_payrun(db, payrun_id, for_update=True)
     if payrun.state not in (PayrunState.VALIDATED, PayrunState.PAID):
         raise ConflictError(
             "Validate the payrun before sending payslips.",
@@ -484,7 +494,9 @@ def recompute_payslip(
     that had already been paid.
     """
     payslip = _get_payslip(db, payslip_id, ctx)
-    payrun = payslip.payrun
+    # Locked for the same reason as the transition endpoints: this recomputes
+    # the whole payrun, so it must not race a concurrent validate/mark-paid.
+    payrun = _get_payrun(db, payslip.payrun_id, for_update=True)
     if payrun.state not in payrun_service.COMPUTABLE_STATES:
         raise ConflictError(
             f"This payslip belongs to a {payrun.state} payrun and cannot be "

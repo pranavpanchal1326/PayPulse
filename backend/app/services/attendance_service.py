@@ -20,7 +20,7 @@ from datetime import date, datetime, time, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -225,36 +225,10 @@ def absent_dates(
     return frozenset(contract_dates) - dates_with_rows - leave_dates
 
 
-def attendance_dates(
-    db: Session, employee_id: int, period_start: date, period_end: date
-) -> frozenset[date]:
-    """Days the employee has an attendance row for."""
-    return frozenset(
-        db.scalars(
-            select(Attendance.work_date).where(
-                Attendance.employee_id == employee_id,
-                Attendance.work_date >= period_start,
-                Attendance.work_date <= period_end,
-            )
-        )
-    )
-
-
 def open_row_for(db: Session, employee_id: int, day: date) -> Attendance | None:
     """The employee's row for a day, if any. Used by check-in/check-out."""
     return db.scalar(
         select(Attendance).where(
             Attendance.employee_id == employee_id, Attendance.work_date == day
         )
-    )
-
-
-def count_for(db: Session, employee_id: int) -> int:
-    return (
-        db.scalar(
-            select(func.count())
-            .select_from(Attendance)
-            .where(Attendance.employee_id == employee_id)
-        )
-        or 0
     )

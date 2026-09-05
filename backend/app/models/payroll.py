@@ -97,11 +97,6 @@ class Payrun(Base, TimestampMixin):
         back_populates="payrun", cascade="all, delete-orphan"
     )
 
-    @property
-    def is_editable(self) -> bool:
-        """Whether compute may run. PAID and VALIDATED are historical."""
-        return self.state in (PayrunState.DRAFT, PayrunState.COMPUTED)
-
     def __repr__(self) -> str:  # pragma: no cover - debug helper
         return f"<Payrun {self.id} {self.period_start}..{self.period_end} {self.state}>"
 
