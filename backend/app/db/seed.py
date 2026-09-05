@@ -210,6 +210,208 @@ SEED_HOLIDAYS: list[tuple[date, str, bool]] = [
 # Must cover the historical payrun window (6 months): a month with no
 # attendance reads as 100% absent, which charges a full month of LWP and
 # produces a negative net the engine correctly refuses to validate.
+
+# ---------------------------------------------------------------------------
+# The rest of the company.
+#
+# The five above own the demo logins and every scripted beat - the mid-month
+# raise, the missing bank details, the reporting lines - so they are written
+# out by hand and never generated. A five-person payroll, though, makes the
+# department chart, the low-balance panel and the salary-cost breakdown look
+# like placeholder art, so the remaining headcount is generated here.
+#
+# Deterministic: one fixed seed, so a re-seed produces the same company and a
+# screenshot taken today still matches the data next week.
+# ---------------------------------------------------------------------------
+
+GENERATED_HEADCOUNT = 35
+COMPANY_RNG_SEED = 20260901
+
+_FIRST_NAMES = [
+    "Aarav", "Ananya", "Rohan", "Priya", "Vikram", "Meera", "Arjun", "Divya",
+    "Karthik", "Shreya", "Nikhil", "Pooja", "Siddharth", "Anjali", "Rahul",
+    "Kavya", "Manish", "Ishita", "Aditya", "Tanvi", "Harsh", "Sanjana",
+    "Varun", "Nisha", "Gaurav", "Ritika", "Sameer", "Aditi", "Yash", "Swara",
+    "Abhishek", "Lakshmi", "Pranav", "Deepa", "Rohit", "Sneha", "Kunal",
+]
+_LAST_NAMES = [
+    "Sharma", "Iyer", "Reddy", "Nair", "Gupta", "Joshi", "Rao", "Bhat",
+    "Chowdhury", "Malhotra", "Pillai", "Sinha", "Kaur", "Verma", "Das",
+    "Kulkarni", "Mehta", "Banerjee", "Agarwal", "Naidu", "Fernandes", "Bose",
+]
+
+# position -> (monthly wage floor, ceiling). Bands, not random numbers: a QA
+# engineer earning more than the engineering manager makes every chart on the
+# dashboard nonsense.
+_WAGE_BANDS: dict[str, tuple[int, int]] = {
+    "Software Engineer": (45_000, 70_000),
+    "Senior Software Engineer": (80_000, 120_000),
+    "Engineering Manager": (130_000, 170_000),
+    "QA Engineer": (38_000, 58_000),
+    "HR Executive": (32_000, 46_000),
+    "HR Manager": (70_000, 95_000),
+    "Payroll Executive": (38_000, 55_000),
+    "Payroll Manager": (75_000, 100_000),
+    "Sales Executive": (35_000, 55_000),
+    "Account Manager": (60_000, 85_000),
+    "Operations Analyst": (42_000, 62_000),
+    "Support Engineer": (34_000, 50_000),
+}
+
+# Headcount per department, and which positions it draws from.
+_DEPARTMENT_PLAN: list[tuple[str, int, list[str]]] = [
+    ("Engineering", 13, [
+        "Software Engineer", "Software Engineer", "Senior Software Engineer",
+        "QA Engineer", "Engineering Manager",
+    ]),
+    ("Sales", 9, ["Sales Executive", "Sales Executive", "Account Manager"]),
+    ("Operations", 8, ["Operations Analyst", "Support Engineer"]),
+    ("Human Resources", 5, ["HR Executive", "Payroll Executive", "HR Manager"]),
+]
+
+
+def _generate_company() -> tuple[list, list, dict, set, list]:
+    """Build the generated half of the company.
+
+    Returns (employees, contracts, exits, without_bank, allocations) in the
+    same shapes the hand-written SEED_* lists use, so every seeding function
+    below treats both halves identically.
+    """
+    rng = random.Random(COMPANY_RNG_SEED)
+    employees: list = []
+    contracts: list = []
+    exits: dict[str, date] = {}
+    without_bank: set[str] = set()
+    allocations: list = []
+
+    used_names: set[tuple[str, str]] = set()
+    made = 0
+
+    for department, headcount, positions in _DEPARTMENT_PLAN:
+        for _ in range(headcount):
+            if made >= GENERATED_HEADCOUNT:
+                break
+
+            while True:
+                first = rng.choice(_FIRST_NAMES)
+                last = rng.choice(_LAST_NAMES)
+                if (first, last) not in used_names:
+                    used_names.add((first, last))
+                    break
+            email = f"{first.lower()}.{last.lower()}@paypulse.app"
+            position = rng.choice(positions)
+
+            # Mostly full time on the standard week. The other shapes exist
+            # because payroll has to prove it prorates them, not for variety.
+            roll = rng.random()
+            if roll < 0.76:
+                emp_type, schedule = EmployeeType.FULL_TIME, "Standard 40h"
+            elif roll < 0.86:
+                emp_type, schedule = EmployeeType.PART_TIME, "Part-time 20h"
+            elif roll < 0.94:
+                emp_type, schedule = EmployeeType.CONTRACT, "Standard 40h"
+            else:
+                emp_type, schedule = EmployeeType.INTERN, "Part-time 20h"
+            if department == "Operations" and rng.random() < 0.25:
+                schedule = "Night Shift 35h"   # support runs a night rota
+
+            joined = date(2019, 1, 1) + timedelta(days=rng.randrange(0, 2400))
+            employees.append(
+                (email, first, last, department, position, schedule,
+                 emp_type, joined)
+            )
+
+            low, high = _WAGE_BANDS[position]
+            wage = f"{rng.randrange(low, high, 500)}.00"
+
+            # A tenth of the company left at some point: the roster needs
+            # INACTIVE rows, and payroll needs to prove it does not pay them.
+            if rng.random() < 0.10:
+                left = joined + timedelta(days=rng.randrange(400, 1800))
+                if left < date.today():
+                    exits[email] = left
+                    contracts.append(
+                        (email, wage, joined, left, ContractState.EXPIRED)
+                    )
+                    made += 1
+                    continue
+
+            contracts.append((email, wage, joined, None, ContractState.RUNNING))
+
+            # Some genuinely have no bank details on file. That is what
+            # MISSING_BANK_DETAILS is for, and it should fire on more than one
+            # person or the warning looks like a fixture.
+            if rng.random() < 0.09:
+                without_bank.add(email)
+
+            allocations.append(
+                (email, "AL", str(rng.choice([12, 15, 18, 21])),
+                 date(2026, 1, 1), date(2026, 12, 31))
+            )
+            if rng.random() < 0.55:
+                allocations.append(
+                    (email, "SL", str(rng.choice([6, 8, 10])),
+                     date(2026, 1, 1), date(2026, 12, 31))
+                )
+            made += 1
+
+    return employees, contracts, exits, without_bank, allocations
+
+
+(
+    _GEN_EMPLOYEES,
+    _GEN_CONTRACTS,
+    EMPLOYEE_EXITS,
+    _GEN_WITHOUT_BANK,
+    _GEN_ALLOCATIONS,
+) = _generate_company()
+
+SEED_EMPLOYEES += _GEN_EMPLOYEES
+SEED_CONTRACTS += _GEN_CONTRACTS
+WITHOUT_BANK_DETAILS |= _GEN_WITHOUT_BANK
+
+
+def _generate_leave_plan() -> list[tuple[str, str, int, int, "RequestState"]]:
+    """Leave for the generated half of the company.
+
+    Windows are drawn from fixed, non-overlapping slots rather than at random:
+    two spans that touched would be a double claim on the same day, which the
+    overlap guard exists to reject, and seeding data the API would refuse is a
+    good way to ship a fixture nobody can reproduce.
+
+    A few people are deliberately taken close to the bottom of their annual
+    allocation, so the dashboard's low-balance panel has something true to say.
+    """
+    rng = random.Random(COMPANY_RNG_SEED + 1)
+    # (start days ago, end days ago) - ordered, disjoint, all in the past.
+    slots = [(165, 161), (140, 136), (118, 116), (96, 93), (74, 72),
+             (52, 50), (33, 31)]
+    plan: list[tuple[str, str, int, int, RequestState]] = []
+
+    for email, *_ in _GEN_EMPLOYEES:
+        if email in EMPLOYEE_EXITS:
+            continue                      # nobody books leave after leaving
+        if rng.random() < 0.35:
+            continue                      # not everyone takes leave
+
+        # A tenth of the company is near the end of its allowance.
+        heavy = rng.random() < 0.12
+        picks = rng.sample(slots, rng.randrange(4, 7) if heavy else rng.randrange(1, 3))
+        for start_ago, end_ago in picks:
+            code = rng.choice(["AL", "AL", "AL", "SL", "CL"])
+            plan.append((email, code, start_ago, end_ago, RequestState.APPROVED))
+
+        # A couple of live requests each, so the approvals queue is not empty.
+        if rng.random() < 0.20:
+            plan.append((email, "AL", -14, -12, RequestState.TO_APPROVE))
+        if rng.random() < 0.08:
+            plan.append((email, "CL", -25, -25, RequestState.REFUSED))
+
+    return plan
+
+
+GENERATED_LEAVE_PLAN = _generate_leave_plan()
+
 ATTENDANCE_DAYS = 200
 ATTENDANCE_RNG_SEED = 20260101
 
@@ -244,6 +446,9 @@ SEED_ALLOCATIONS: list[tuple[str, str, str, date, date]] = [
     ("employee@paypulse.app", "SL", "8", date(2026, 1, 1), date(2026, 12, 31)),
     ("payroll.user@paypulse.app", "SL", "8", date(2026, 1, 1), date(2026, 12, 31)),
 ]
+
+# Leave for the generated half of the company.
+SEED_ALLOCATIONS += _GEN_ALLOCATIONS
 
 
 def seed_users(db: Session) -> None:
@@ -346,8 +551,10 @@ def seed_employees(
         employee.working_schedule_id = schedules[schedule].id
         employee.employee_type = emp_type
         employee.date_of_joining = joined
-        employee.date_of_exit = None
-        employee.status = employee_service.derive_status(None)
+        # Status is derived from the exit date, never set directly, so the
+        # roster cannot claim someone is ACTIVE the day after they left.
+        employee.date_of_exit = EMPLOYEE_EXITS.get(user_email)
+        employee.status = employee_service.derive_status(employee.date_of_exit)
         if user_email in WITHOUT_BANK_DETAILS:
             employee.bank_account = None
             employee.bank_ifsc = None
@@ -368,7 +575,12 @@ def seed_employees(
             user.employee_id = employee.id
 
     db.flush()
-    logger.info("  employees          %d (linked to logins)", len(by_email))
+    logger.info(
+        "  employees          %d (%d with logins, %d inactive)",
+        len(by_email),
+        len(REPORTING_LINES) + 2,
+        len(EMPLOYEE_EXITS),
+    )
     return by_email
 
 
@@ -571,6 +783,7 @@ def seed_leave(db: Session, employees: dict[str, Employee]) -> None:
         # swallowed. Negative "days ago" means days ahead.
         ("employee@paypulse.app", "AL", -12, -14, RequestState.TO_APPROVE),
         ("payroll.user@paypulse.app", "CL", -19, -19, RequestState.REFUSED),
+        *GENERATED_LEAVE_PLAN,
     ]
 
     approver = db.scalar(select(User).where(User.email == "hr.manager@paypulse.app"))

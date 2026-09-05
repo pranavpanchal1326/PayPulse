@@ -29,15 +29,15 @@ docker compose exec api python -m app.db.seed
 
 ## Demo accounts
 
-All use the password **`peoplepay`**.
+All use the password **`paypulse`**.
 
 | Email | Role |
 |---|---|
-| `admin@peoplepay360.com` | ADMIN |
-| `payroll.manager@peoplepay360.com` | HR_PAYROLL_MANAGER |
-| `payroll.user@peoplepay360.com` | HR_PAYROLL_USER |
-| `hr.manager@peoplepay360.com` | HR_MANAGER |
-| `employee@peoplepay360.com` | EMPLOYEE |
+| `admin@paypulse.app` | ADMIN |
+| `payroll.manager@paypulse.app` | HR_PAYROLL_MANAGER |
+| `payroll.user@paypulse.app` | HR_PAYROLL_USER |
+| `hr.manager@paypulse.app` | HR_MANAGER |
+| `employee@paypulse.app` | EMPLOYEE |
 
 ## For the frontend
 

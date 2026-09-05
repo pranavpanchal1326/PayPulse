@@ -22,6 +22,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.enums import Weekday
 from app.db.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
@@ -78,7 +79,7 @@ class WorkingScheduleLine(Base):
     schedule_id: Mapped[int] = mapped_column(
         ForeignKey("working_schedule.id", ondelete="CASCADE"), index=True
     )
-    day_of_week: Mapped[int] = mapped_column(Integer)
+    day_of_week: Mapped[Weekday] = mapped_column(Integer)
     start_time: Mapped[time] = mapped_column(Time)
     end_time: Mapped[time] = mapped_column(Time)
     break_minutes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -86,4 +87,7 @@ class WorkingScheduleLine(Base):
     schedule: Mapped[WorkingSchedule] = relationship(back_populates="lines")
 
     def __repr__(self) -> str:  # pragma: no cover - debug helper
-        return f"<ScheduleLine d{self.day_of_week} {self.start_time}-{self.end_time}>"
+        return (
+            f"<ScheduleLine {Weekday(self.day_of_week).label} "
+            f"{self.start_time}-{self.end_time}>"
+        )

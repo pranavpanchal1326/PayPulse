@@ -2,7 +2,7 @@
 
 Lives in `core` rather than `models` so that pure-policy modules (rbac) and
 schemas can import the vocabulary without dragging in SQLAlchemy."""
-from enum import StrEnum
+from enum import IntEnum, StrEnum
 
 
 class Role(StrEnum):
@@ -13,6 +13,38 @@ class Role(StrEnum):
     HR_PAYROLL_USER = "HR_PAYROLL_USER"
     HR_PAYROLL_MANAGER = "HR_PAYROLL_MANAGER"
     ADMIN = "ADMIN"
+
+
+class Weekday(IntEnum):
+    """A day of the working week.
+
+    An **IntEnum**, not a StrEnum like the rest of this module, and the value
+    is `date.weekday()`'s: Monday is 0. That keeps three things working that a
+    string would break - the column stays an integer so no data migration is
+    needed, `line.day_of_week == day.weekday()` still compares directly, and
+    sorting a schedule's lines still yields Monday first rather than
+    alphabetical order (which would open the week on Friday).
+
+    It replaces a bare `int` carrying a separate DAY_NAMES lookup list: two
+    things that had to be kept in step, and could silently drift apart.
+    """
+
+    MONDAY = 0
+    TUESDAY = 1
+    WEDNESDAY = 2
+    THURSDAY = 3
+    FRIDAY = 4
+    SATURDAY = 5
+    SUNDAY = 6
+
+    @property
+    def label(self) -> str:
+        """"Monday", for the schedule grid header."""
+        return self.name.capitalize()
+
+    @property
+    def is_weekend(self) -> bool:
+        return self in (Weekday.SATURDAY, Weekday.SUNDAY)
 
 
 class EmployeeStatus(StrEnum):

@@ -5,20 +5,12 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-DAY_NAMES = [
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday",
-]
-
+from app.core.enums import Weekday
 
 class WorkingScheduleLineIn(BaseModel):
-    # Monday is 0, matching Python's date.weekday().
-    day_of_week: int = Field(ge=0, le=6)
+    # Monday is 0, matching Python's date.weekday(). Serialises as that
+    # integer, so the weekly grid editor is unaffected.
+    day_of_week: Weekday
     start_time: time
     end_time: time
     break_minutes: int = Field(default=0, ge=0, lt=24 * 60)
@@ -38,7 +30,7 @@ class WorkingScheduleLineOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    day_of_week: int
+    day_of_week: Weekday
     day_name: str = ""
     start_time: time
     end_time: time

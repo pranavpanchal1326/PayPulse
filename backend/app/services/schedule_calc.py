@@ -16,6 +16,7 @@ from datetime import time
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Protocol
 
+from app.core.enums import Weekday
 from app.core.errors import BusinessRuleError
 
 MINUTES_PER_DAY = 24 * 60
@@ -33,7 +34,7 @@ class ScheduleLineLike(Protocol):
     before there is a row to read them from.
     """
 
-    day_of_week: int
+    day_of_week: Weekday
     start_time: time
     end_time: time
     break_minutes: int
@@ -44,7 +45,7 @@ def _minutes(value: time) -> int:
 
 
 def line_minutes(
-    start: time, end: time, break_minutes: int = 0, *, day_of_week: int | None = None
+    start: time, end: time, break_minutes: int = 0, *, day_of_week: Weekday | None = None
 ) -> int:
     """Paid minutes for one working day, net of the unpaid break.
 
@@ -55,7 +56,9 @@ def line_minutes(
     if span <= 0:
         span += MINUTES_PER_DAY
 
-    where = f" on day {day_of_week}" if day_of_week is not None else ""
+    where = (
+        f" on {Weekday(day_of_week).label}" if day_of_week is not None else ""
+    )
 
     if span > MAX_SHIFT_MINUTES:
         raise BusinessRuleError(
@@ -123,10 +126,14 @@ def assert_unique_days(lines: Iterable[ScheduleLineLike]) -> None:
     for line in lines:
         if line.day_of_week in seen:
             raise BusinessRuleError(
-                f"Day {line.day_of_week} appears more than once in this schedule.",
+                f"{Weekday(line.day_of_week).label} appears more than once "
+                "in this schedule.",
                 code="duplicate_schedule_day",
                 field_errors=[
-                    {"field": "lines", "message": f"Duplicate day {line.day_of_week}"}
+                    {
+                        "field": "lines",
+                        "message": f"Duplicate {Weekday(line.day_of_week).label}",
+                    }
                 ],
             )
         seen.add(line.day_of_week)

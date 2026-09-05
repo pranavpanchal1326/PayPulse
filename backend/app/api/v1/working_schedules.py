@@ -13,12 +13,12 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.deps import AccessContext, DbSession, require
+from app.core.enums import Weekday
 from app.core.errors import ConflictError, NotFoundError
 from app.core.rbac import Action, Resource
 from app.models.employee import Employee
 from app.models.schedule import WorkingSchedule, WorkingScheduleLine
 from app.schemas.schedule import (
-    DAY_NAMES,
     WorkingScheduleCreate,
     WorkingScheduleLineOut,
     WorkingScheduleOut,
@@ -44,7 +44,7 @@ def _to_out(schedule: WorkingSchedule, employee_count: int = 0) -> WorkingSchedu
         WorkingScheduleLineOut(
             id=line.id,
             day_of_week=line.day_of_week,
-            day_name=DAY_NAMES[line.day_of_week],
+            day_name=Weekday(line.day_of_week).label,
             start_time=line.start_time,
             end_time=line.end_time,
             break_minutes=line.break_minutes,

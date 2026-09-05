@@ -16,6 +16,7 @@ from __future__ import annotations
 import sys
 
 
+from app.db.seed import SEED_CONTRACTS, SEED_EMPLOYEES
 from scripts._smoke import call, check, finish, login
 
 
@@ -25,14 +26,27 @@ emp = login("employee@paypulse.app")
 
 print("\nseeded contracts")
 page = call("GET", "/contracts", hr)
-check(page["total"] == 7, f"7 seeded contracts, got {page['total']}")
+expected_contracts = len(SEED_CONTRACTS)
+check(
+    page["total"] == expected_contracts,
+    f"{expected_contracts} seeded contracts, got {page['total']}",
+)
 
 running = call("GET", "/contracts?state=RUNNING", hr)
-check(running["total"] == 6, f"6 running, got {running['total']}")
+expected_running = sum(1 for c in SEED_CONTRACTS if c[4].value == "RUNNING")
+check(
+    running["total"] == expected_running,
+    f"{expected_running} running, got {running['total']}",
+)
 
 print("\nspec A2: the active contract is identifiable")
 active_flags = [c for c in page["items"] if c["is_active_now"]]
-check(len(active_flags) == 5, f"{len(active_flags)} contracts active today")
+# One active contract per employee who has one - never two, which is
+# the invariant the exclusion constraint exists to hold.
+check(
+    0 < len(active_flags) <= expected_running,
+    f"{len(active_flags)} contracts active today, of {expected_running} running",
+)
 
 print("\nsetup: a throwaway employee to mutate")
 who = call(

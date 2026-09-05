@@ -14,6 +14,7 @@ from __future__ import annotations
 import sys
 
 
+from app.db.seed import SEED_CONTRACTS, SEED_EMPLOYEES
 from scripts._smoke import call, check, finish, login
 
 
@@ -89,7 +90,10 @@ call(
 
 print("\nemployees")
 page = call("GET", "/employees", hr)
-assert page["total"] == 5, page["total"]
+# Derived from the seed, not repeated from it: the headcount is a
+# knob, and a literal here turns scaling the dataset into a test
+# failure that says nothing.
+assert page["total"] == len(SEED_EMPLOYEES), page["total"]
 call("GET", "/employees?q=sneha", hr)
 call("GET", "/employees?status=ACTIVE", hr)
 call("GET", "/employees/1/summary", hr)
