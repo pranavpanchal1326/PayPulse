@@ -311,6 +311,46 @@ summary = call("GET", "/employees/5/summary", hr)
 check(summary["time_off_requests"] > 0, f"{summary['time_off_requests']} requests")
 check(summary["allocations"] > 0, f"{summary['allocations']} allocations")
 
+print("")
+print("hour-unit leave: presented in hours, checked in days")
+# Compensatory Off is the only HOURS type. The ledger stores days; the
+# endpoint presents hours. Both halves are asserted here because converting
+# in the engine instead would hand the over-balance guard hours to compare
+# against days, and it would approve past zero.
+comp = balance_of(hr, 5, "COMP")
+check(comp is not None, "employee 5 has a Compensatory Off balance")
+check(
+    comp["unit"] == "HOURS" and comp["allocated"] == "12.00",
+    "allocation presents as " + comp["allocated"] + " hours, not its 1.50 days",
+)
+
+over = call(
+    "POST",
+    "/time-off/requests",
+    emp,
+    {
+        "time_off_type_id": comp["time_off_type_id"],
+        "date_from": "2026-11-09",
+        "date_to": "2026-11-09",
+        "duration_hours": "20",
+        "reason": "b4 over-balance guard",
+    },
+    expect=201,
+)
+check(over["duration_hours"] == "20.00", "20 hours requested")
+refused = call(
+    "POST", "/time-off/requests/" + str(over["id"]) + "/approve", hr, {}, expect=422
+)
+check(
+    refused.get("code") == "LEAVE_EXCEEDS_ALLOCATION",
+    "approving 20h against a 12h allocation is refused",
+)
+call("POST", "/time-off/requests/" + str(over["id"]) + "/cancel", hr, {})
+check(
+    balance_of(hr, 5, "COMP")["remaining"] == "12.00",
+    "and the balance is untouched at 12.00 hours",
+)
+
 print("\nRBAC")
 own = call("GET", "/time-off/requests", emp)
 check(
