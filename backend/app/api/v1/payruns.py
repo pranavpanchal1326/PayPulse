@@ -7,11 +7,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query, Response, status
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.deps import AccessContext, DbSession, require
 from app.core.enums import PayrunState, PayslipState, WarningSeverity
-from app.core.errors import ConflictError, NotFoundError, PermissionDeniedError
+from app.core.errors import ConflictError, NotFoundError
 from app.core.rbac import Action, Resource
 from app.models.payroll import PayrollWarning, Payrun, Payslip
 from app.models.salary import SalaryStructure
@@ -257,7 +258,21 @@ def create_payrun(
         payload.period_end,
         payload.employee_ids,
     )
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        # payrun_service.create pre-checks for a clashing payslip, but that
+        # check and this insert are not atomic: two concurrent creates for the
+        # same employee and period both pass it and the partial unique index
+        # catches the loser. Without this it surfaces as a 500 instead of the
+        # 409 the pre-check would have given.
+        db.rollback()
+        raise ConflictError(
+            "An employee in this selection already has a payslip for "
+            f"{payload.period_start} to {payload.period_end}. Reload and try "
+            "again.",
+            code="DUPLICATE_PAYSLIP",
+        ) from exc
     db.refresh(payrun)
     return _payrun_detail(db, payrun)
 
@@ -458,7 +473,10 @@ def _get_payslip(db: Session, payslip_id: int, ctx: AccessContext) -> Payslip:
     if payslip is None:
         raise NotFoundError(f"Payslip {payslip_id} not found")
     if ctx.employee_filter is not None and payslip.employee_id != ctx.employee_filter:
-        raise PermissionDeniedError("You may only view your own payslips")
+        # 404, not 403: a 403 here confirms the payslip exists, which lets an
+        # own-scoped caller enumerate ids and learn how many payslips other
+        # employees have. Indistinguishable from a genuine miss.
+        raise NotFoundError(f"Payslip {payslip_id} not found")
     return payslip
 
 

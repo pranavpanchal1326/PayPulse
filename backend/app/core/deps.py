@@ -10,7 +10,11 @@ from sqlalchemy.orm import Session
 
 from app.core.errors import AuthenticationError, PermissionDeniedError
 from app.core.rbac import Action, Resource, Scope, grant_for
-from app.core.security import TokenError, decode_token
+from app.core.security import (
+    TokenError,
+    assert_token_not_revoked,
+    decode_token,
+)
 from app.db.session import get_db
 from app.models.user import User
 
@@ -37,6 +41,12 @@ def get_current_user(
         raise AuthenticationError("User no longer exists")
     if not user.is_active:
         raise AuthenticationError("User account is disabled")
+    try:
+        assert_token_not_revoked(payload, user)
+    except TokenError as exc:
+        # Must be converted here: this runs outside the decode try/except, so
+        # an escaping TokenError would surface as a 500 rather than a 401.
+        raise AuthenticationError(str(exc)) from exc
     return user
 
 

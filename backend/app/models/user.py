@@ -1,7 +1,9 @@
 """Authentication principal. The HR identity lives on Employee (B1)."""
 from __future__ import annotations
 
-from sqlalchemy import Boolean, Integer, String
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, Integer, String
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -22,6 +24,16 @@ class User(Base, TimestampMixin):
         index=True,
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    # Tokens issued at or before this instant are rejected. Logout stamps it
+    # with "now", which is what makes a refresh token revocable at all: they
+    # live for days, are not checked against any store, and until this column
+    # existed a leaked one could not be cancelled short of disabling the
+    # account. One column revokes every session for the user at once, which
+    # is the behaviour "log me out everywhere" wants anyway.
+    tokens_valid_from: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     # Links this login to an HR record. Plain column for now; the FK to
     # employee.id is added in the B1 migration, once that table exists.

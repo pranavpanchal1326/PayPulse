@@ -30,6 +30,18 @@ def hash_password(password: str) -> str:
     return bcrypt.hashpw(_prepare(password), bcrypt.gensalt()).decode("utf-8")
 
 
+# A real hash to check against when the email is unknown. Without it, a miss
+# returns before bcrypt runs and answers in about a millisecond where a hit
+# takes about a hundred, so the identical error message is undone by the
+# clock and the endpoint enumerates accounts anyway.
+_DUMMY_HASH = bcrypt.hashpw(b"dummy-password-for-constant-time-login", bcrypt.gensalt())
+
+
+def waste_a_verify() -> None:
+    """Burn one bcrypt verification, so a login miss costs what a hit costs."""
+    bcrypt.checkpw(b"dummy-password-for-constant-time-login", _DUMMY_HASH)
+
+
 def verify_password(password: str, password_hash: str) -> bool:
     try:
         return bcrypt.checkpw(_prepare(password), password_hash.encode("utf-8"))
@@ -92,3 +104,22 @@ def decode_token(token: str, expected_type: TokenType | None = None) -> dict[str
         # Stops a refresh token being replayed as an access token.
         raise TokenError(f"Expected a {expected_type} token")
     return payload
+
+
+def assert_token_not_revoked(payload: dict[str, Any], user) -> None:
+    """Reject a token issued at or before the user's revocation cutoff.
+
+    `iat` is a UTC timestamp; `tokens_valid_from` is stamped by logout. The
+    comparison is `<=` so every token minted in the same second as the logout
+    dies with it, rather than one of them surviving on a rounding accident.
+    """
+    cutoff = getattr(user, "tokens_valid_from", None)
+    if cutoff is None:
+        return
+    issued_at = payload.get("iat")
+    if issued_at is None:
+        raise TokenError("Token is invalid")
+    if isinstance(issued_at, (int, float)):
+        issued_at = datetime.fromtimestamp(issued_at, UTC)
+    if issued_at <= cutoff:
+        raise TokenError("Token has been revoked. Sign in again.")

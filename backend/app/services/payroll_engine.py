@@ -314,17 +314,24 @@ def compute(
     # 5. Finalize and assert reconciliation.
     result.basic, result.gross, result.total_deductions, result.net = totals(lines)
 
-    net_line = next(
-        (line for line in lines if line.category is RuleCategory.NET), None
-    )
-    if net_line is not None and net_line.amount != result.net:
-        result.warnings.append(
-            ResolvedWarning(
-                WarningCode.PAYSLIP_NOT_RECONCILED,
-                f"The NET rule produced {net_line.amount} but gross minus "
-                f"deductions is {result.net}. The rule set does not balance.",
+    # A GROSS or NET rule is a restatement of a subtotal the engine derives
+    # itself, and the payslip renders the derived figure. So a rule that
+    # disagrees is never visible on the document - it has to be caught here
+    # or it is silent. NET was already checked; GROSS was not.
+    for category, derived, expression in (
+        (RuleCategory.GROSS, result.gross, "earnings"),
+        (RuleCategory.NET, result.net, "gross minus deductions"),
+    ):
+        line = next((ln for ln in lines if ln.category is category), None)
+        if line is not None and line.amount != derived:
+            result.warnings.append(
+                ResolvedWarning(
+                    WarningCode.PAYSLIP_NOT_RECONCILED,
+                    f"The {category.value} rule produced {line.amount} but "
+                    f"{expression} total {derived}. The rule set does not "
+                    "balance.",
+                )
             )
-        )
     if result.net < 0:
         result.warnings.append(
             ResolvedWarning(
