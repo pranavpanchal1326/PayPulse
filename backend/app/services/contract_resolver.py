@@ -29,7 +29,7 @@ from dataclasses import dataclass, field
 from datetime import date
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.enums import ContractState, WarningCode
 from app.models.contract import Contract
@@ -180,6 +180,43 @@ def running_contracts(
         .order_by(Contract.date_start.desc())
     )
     return list(db.scalars(stmt))
+
+
+def resolve_many(
+    db: Session,
+    employee_ids: list[int],
+    period_start: date,
+    period_end: date,
+) -> dict[int, ContractResolution]:
+    """Resolve a whole batch in one query.
+
+    `resolve` is one query per employee, which a payrun over 500 people pays
+    500 times. The decision itself is already pure, so batching is only a
+    matter of loading the contracts together and grouping them.
+    """
+    if not employee_ids:
+        return {}
+
+    stmt = (
+        select(Contract)
+        .where(
+            Contract.employee_id.in_(employee_ids),
+            Contract.state == ContractState.RUNNING,
+            Contract.date_start <= period_end,
+            (Contract.date_end.is_(None)) | (Contract.date_end >= period_start),
+        )
+        .options(selectinload(Contract.working_schedule))
+        .order_by(Contract.date_start.desc())
+    )
+
+    by_employee: dict[int, list[Contract]] = {eid: [] for eid in employee_ids}
+    for contract in db.scalars(stmt):
+        by_employee[contract.employee_id].append(contract)
+
+    return {
+        employee_id: select_applicable(contracts, period_start, period_end)
+        for employee_id, contracts in by_employee.items()
+    }
 
 
 def resolve(

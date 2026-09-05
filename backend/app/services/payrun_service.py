@@ -29,7 +29,15 @@ from app.core.errors import BusinessRuleError, ConflictError
 from app.models.employee import Employee
 from app.models.payroll import Payrun, Payslip, PayslipLine
 from app.models.salary import SalaryStructure
-from app.services import calendar, contract_resolver, payroll_engine, warnings
+from app.models.schedule import WorkingSchedule
+from app.services import (
+    attendance_service,
+    calendar,
+    contract_resolver,
+    leave_engine,
+    payroll_engine,
+    warnings,
+)
 
 COMPUTABLE_STATES = (PayrunState.DRAFT, PayrunState.COMPUTED)
 
@@ -70,6 +78,10 @@ def eligible_employees(
         ))
     )
     holidays = calendar.holiday_dates(db, period_start, period_end)
+    # One query for the whole batch instead of one per employee.
+    resolutions = contract_resolver.resolve_many(
+        db, [e.id for e in employees], period_start, period_end
+    )
 
     # Employees already carrying a live payslip for this exact period, so the
     # user sees the clash before creating the payrun rather than hitting the
@@ -86,9 +98,7 @@ def eligible_employees(
 
     rows: list[Eligibility] = []
     for employee in employees:
-        resolution = contract_resolver.resolve(
-            db, employee.id, period_start, period_end
-        )
+        resolution = resolutions[employee.id]
         blockers = [
             w.code.value for w in resolution.warnings if resolution.is_blocking
         ]
@@ -286,8 +296,28 @@ def compute(db: Session, payrun: Payrun) -> Payrun:
         db.scalars(
             select(Payslip)
             .where(Payslip.payrun_id == payrun.id)
-            .options(selectinload(Payslip.employee))
+            .options(
+                # department and working_schedule are both read per employee
+                # while building the formula context and the pay basis, so
+                # they are loaded with the batch rather than lazily one by one.
+                selectinload(Payslip.employee).selectinload(Employee.department),
+                selectinload(Payslip.employee)
+                .selectinload(Employee.working_schedule)
+                .selectinload(WorkingSchedule.lines),
+            )
         )
+    )
+
+    # Three queries for the whole batch, rather than three per payslip.
+    employee_ids = [p.employee_id for p in payslips]
+    resolutions = contract_resolver.resolve_many(
+        db, employee_ids, payrun.period_start, payrun.period_end
+    )
+    attendance_by_employee = attendance_service.summarise_many(
+        db, employee_ids, payrun.period_start, payrun.period_end
+    )
+    leave_by_employee = leave_engine.approved_requests_many(
+        db, employee_ids, payrun.period_start, payrun.period_end
     )
 
     for payslip in payslips:
@@ -297,7 +327,15 @@ def compute(db: Session, payrun: Payrun) -> Payrun:
 
         employee = payslip.employee
         result = payroll_engine.compute(
-            db, employee, structure, payrun.period_start, payrun.period_end, holidays
+            db,
+            employee,
+            structure,
+            payrun.period_start,
+            payrun.period_end,
+            holidays,
+            resolution=resolutions[employee.id],
+            attendance=attendance_by_employee[employee.id],
+            leave_requests=leave_by_employee[employee.id],
         )
 
         payslip.contract_id = result.contract_id

@@ -189,6 +189,29 @@ def summarise(
     return summarise_rows(rows)
 
 
+def summarise_many(
+    db: Session, employee_ids: list[int], period_start: date, period_end: date
+) -> dict[int, AttendanceSummary]:
+    """Summarise a whole batch in one query, keyed by employee id.
+
+    This is the bulk load `summarise_rows` was split out for.
+    """
+    if not employee_ids:
+        return {}
+
+    grouped: dict[int, list] = {eid: [] for eid in employee_ids}
+    for row in db.scalars(
+        select(Attendance).where(
+            Attendance.employee_id.in_(employee_ids),
+            Attendance.work_date >= period_start,
+            Attendance.work_date <= period_end,
+        )
+    ):
+        grouped[row.employee_id].append(row)
+
+    return {eid: summarise_rows(rows) for eid, rows in grouped.items()}
+
+
 def summarise_rows(rows) -> AttendanceSummary:
     """Pure aggregation, so payroll can reuse it over a bulk-loaded batch."""
     return AttendanceSummary(

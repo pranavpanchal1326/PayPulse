@@ -232,8 +232,18 @@ def compute(
     period_start: date,
     period_end: date,
     holidays: frozenset[date] | None = None,
+    *,
+    resolution=None,
+    attendance=None,
+    leave_requests=None,
 ) -> ComputedPayslip:
-    """Compute one employee's payslip. The engine's entry point."""
+    """Compute one employee's payslip. The engine's entry point.
+
+    The keyword arguments are the batch fast path: a payrun resolves every
+    contract, attendance summary and leave request in three queries up front
+    and hands each employee's share in, instead of this function issuing its
+    own per employee.
+    """
     result = ComputedPayslip(
         employee_id=employee.id,
         contract_id=None,
@@ -243,9 +253,10 @@ def compute(
     )
 
     # 1. Resolve the applicable contract (spec A2).
-    resolution = contract_resolver.resolve(
-        db, employee.id, period_start, period_end
-    )
+    if resolution is None:
+        resolution = contract_resolver.resolve(
+            db, employee.id, period_start, period_end
+        )
     result.warnings.extend(resolution.warnings)
     if resolution.contract is None:
         return result
@@ -265,7 +276,14 @@ def compute(
 
     # 2. The pay basis (PRD section 4.2).
     basis = time_basis.build(
-        db, employee, resolution.contract, period_start, period_end, holidays
+        db,
+        employee,
+        resolution.contract,
+        period_start,
+        period_end,
+        holidays,
+        attendance=attendance,
+        leave_requests=leave_requests,
     )
     result.basis = basis
 

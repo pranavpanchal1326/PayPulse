@@ -26,7 +26,7 @@ from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.enums import LeaveUnit, RequestState
 from app.core.errors import BusinessRuleError, ConflictError
@@ -42,20 +42,33 @@ LIVE_STATES = (RequestState.DRAFT, RequestState.TO_APPROVE, RequestState.APPROVE
 
 
 def leave_working_dates(
-    db: Session, employee, date_from: date, date_to: date
+    db: Session,
+    employee,
+    date_from: date,
+    date_to: date,
+    *,
+    contract=None,
+    holidays: frozenset[date] | None = None,
 ) -> list[date]:
     """Working days in a request's span, holidays and weekends removed.
 
     Uses the same calendar payroll uses, so a day can never be leave here
     and a non-working day there.
+
+    `contract` and `holidays` may be supplied by a caller that already has
+    them. Payroll always does, and without them this resolves the contract
+    and reloads the holiday table once per leave request - a nested N+1
+    inside the per-employee loop of a payrun.
     """
-    contract = contract_resolver.active_on(db, employee.id, date_to) or (
-        contract_resolver.active_on(db, employee.id, date_from)
-    )
+    if contract is None:
+        contract = contract_resolver.active_on(db, employee.id, date_to) or (
+            contract_resolver.active_on(db, employee.id, date_from)
+        )
     schedule = calendar.schedule_for(employee, contract)
     if schedule is None:
         return []
-    holidays = calendar.holiday_dates(db, date_from, date_to)
+    if holidays is None:
+        holidays = calendar.holiday_dates(db, date_from, date_to)
     return calendar.working_dates(schedule.lines, date_from, date_to, holidays)
 
 
@@ -320,34 +333,72 @@ class LeaveDays:
 
 
 def approved_leave_days(
-    db: Session, employee, period_start: date, period_end: date
+    db: Session,
+    employee,
+    period_start: date,
+    period_end: date,
+    *,
+    contract=None,
+    holidays: frozenset[date] | None = None,
+    requests=None,
 ) -> LeaveDays:
     """Approved leave dates in a period, split by whether the type is paid.
 
     Returns *dates* rather than counts so the caller can intersect them with
     contract_days - a leave day outside the contract window must not reduce
     pay for a period the employee was not employed in.
+
+    `contract`, `holidays` and `requests` are the payroll fast path: a payrun
+    loads all three once for the whole batch instead of per employee.
     """
-    requests = list(
-        db.scalars(
-            select(TimeOffRequest).where(
-                TimeOffRequest.employee_id == employee.id,
-                TimeOffRequest.state == RequestState.APPROVED,
-                TimeOffRequest.date_from <= period_end,
-                TimeOffRequest.date_to >= period_start,
+    if requests is None:
+        requests = list(
+            db.scalars(
+                select(TimeOffRequest)
+                .where(
+                    TimeOffRequest.employee_id == employee.id,
+                    TimeOffRequest.state == RequestState.APPROVED,
+                    TimeOffRequest.date_from <= period_end,
+                    TimeOffRequest.date_to >= period_start,
+                )
+                .options(selectinload(TimeOffRequest.time_off_type))
             )
         )
-    )
 
     paid: set[date] = set()
     unpaid: set[date] = set()
     for request in requests:
         span_start = max(request.date_from, period_start)
         span_end = min(request.date_to, period_end)
-        days = leave_working_dates(db, employee, span_start, span_end)
+        days = leave_working_dates(
+            db, employee, span_start, span_end,
+            contract=contract, holidays=holidays,
+        )
         (paid if request.time_off_type.is_paid else unpaid).update(days)
 
     return LeaveDays(paid_dates=frozenset(paid), unpaid_dates=frozenset(unpaid))
+
+
+def approved_requests_many(
+    db: Session, employee_ids: list[int], period_start: date, period_end: date
+) -> dict[int, list]:
+    """Approved requests overlapping a period for a batch, in one query."""
+    if not employee_ids:
+        return {}
+
+    grouped: dict[int, list] = {eid: [] for eid in employee_ids}
+    for request in db.scalars(
+        select(TimeOffRequest)
+        .where(
+            TimeOffRequest.employee_id.in_(employee_ids),
+            TimeOffRequest.state == RequestState.APPROVED,
+            TimeOffRequest.date_from <= period_end,
+            TimeOffRequest.date_to >= period_start,
+        )
+        .options(selectinload(TimeOffRequest.time_off_type))
+    ):
+        grouped[request.employee_id].append(request)
+    return grouped
 
 
 def leave_dates(

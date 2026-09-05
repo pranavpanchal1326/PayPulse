@@ -98,11 +98,15 @@ def build(
     period_start: date,
     period_end: date,
     holidays: frozenset[date] | None = None,
+    *,
+    attendance=None,
+    leave_requests=None,
 ) -> PayBasis:
     """Assemble the pay basis for one employee and period.
 
-    `holidays` may be passed in pre-loaded: a payrun computes them once for
-    the whole batch rather than once per employee (PRD section 10).
+    `holidays`, `attendance` and `leave_requests` may all be passed in
+    pre-loaded: a payrun loads them once for the whole batch rather than
+    once per employee (PRD section 10).
     """
     if holidays is None:
         holidays = calendar.holiday_dates(db, period_start, period_end)
@@ -113,11 +117,18 @@ def build(
         lines, employee, contract, period_start, period_end, holidays
     )
 
-    attendance = attendance_service.summarise(
-        db, employee.id, period_start, period_end
-    )
+    if attendance is None:
+        attendance = attendance_service.summarise(
+            db, employee.id, period_start, period_end
+        )
     leave = leave_engine.approved_leave_days(
-        db, employee, period_start, period_end
+        db,
+        employee,
+        period_start,
+        period_end,
+        contract=contract,
+        holidays=holidays,
+        requests=leave_requests,
     )
 
     contract_dates = set(day_basis.contract_dates)
