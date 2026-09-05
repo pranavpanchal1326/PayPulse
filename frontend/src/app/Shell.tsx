@@ -14,12 +14,28 @@ import { IconButton, Tooltip } from "@/components/system";
 import { sound, useSoundEnabled } from "@/sound/useSound";
 import { navFor } from "./nav";
 import { Pulse } from "./Pulse";
+import { ClockControl, ClockProvider, useClock } from "./Clock";
 import { CommandMenu } from "./CommandMenu";
 
 const THEME_KEY = "paypulse.theme";
 
+/**
+ * The shell owns the clock, because the clock is a state the whole
+ * application is in rather than something one screen holds. Everything below
+ * this boundary — the topbar control, the sidebar's light, the Time screen —
+ * reads the same open row.
+ */
 export function Shell() {
+  return (
+    <ClockProvider>
+      <ShellFrame />
+    </ClockProvider>
+  );
+}
+
+function ShellFrame() {
   const { user, signOut } = useAuth();
+  const clock = useClock();
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     try {
       return (localStorage.getItem(THEME_KEY) as "light" | "dark") ?? "light";
@@ -81,9 +97,17 @@ export function Shell() {
         </nav>
 
         <div className="pp-sidebar__foot">
+          {/*
+            The light says whether *you* are on the clock — not whether the
+            server is up. A heartbeat that beats for somebody who went home at
+            six is a light that means nothing, so it goes out with the punch
+            and the label goes with it.
+          */}
           <div className="pp-sidebar__pulse">
-            <Pulse />
-            <span className="t-micro" style={{ color: "var(--ink-400)" }}>Live</span>
+            <Pulse on={clock.open !== null} />
+            <span className="t-micro" style={{ color: "var(--ink-400)" }}>
+              {clock.open !== null ? "On the clock" : "Checked out"}
+            </span>
           </div>
           <div className="pp-sidebar__who">
             <p className="t-ui-sm" style={{ margin: 0 }}>{user.full_name}</p>
@@ -108,6 +132,8 @@ export function Shell() {
           </nav>
 
           <div className="pp-topbar__actions">
+            <ClockControl />
+            <span className="pp-topbar__split" aria-hidden="true" />
             <Tooltip label="Command menu — Ctrl K">
               <IconButton label="Open command menu" size="sm" quiet onClick={() => setCmdOpen(true)}>
                 <Command size={16} />

@@ -18,7 +18,13 @@ function daysLeftInPeriod(now = new Date()) {
   return { left, total };
 }
 
-export function Pulse() {
+/**
+ * `on` is the punch state, not a connection state. When the clock is closed
+ * the light does not beat and it does not stay green — a dead light is the
+ * honest drawing of "you are not working right now", and green that never
+ * changes is decoration.
+ */
+export function Pulse({ on = true }: { on?: boolean }) {
   const [now, setNow] = useState(() => new Date());
 
   // The date only matters to the day; re-checking hourly is plenty.
@@ -36,14 +42,16 @@ export function Pulse() {
   return (
     <Tooltip
       label={
-        left === 0
-          ? "Period ends today"
-          : `${left} ${left === 1 ? "day" : "days"} left in the period`
+        on
+          ? left === 0
+            ? "On the clock · period ends today"
+            : `On the clock · ${left} ${left === 1 ? "day" : "days"} left in the period`
+          : "Not on the clock — check in from the top bar"
       }
     >
       <span
-        className="pp-pulse"
-        style={{ animationDuration: `${period.toFixed(2)}s` }}
+        className={on ? "pp-pulse" : "pp-pulse pp-pulse--off"}
+        style={on ? { animationDuration: `${period.toFixed(2)}s` } : undefined}
         aria-hidden="true"
       />
     </Tooltip>

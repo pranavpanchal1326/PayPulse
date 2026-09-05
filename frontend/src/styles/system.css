@@ -173,7 +173,7 @@
   color: var(--ink-400);
 }
 /* Required is not an error, so it is orange, not red. */
-.pp-field__req { color: var(--orange-500); margin-left: 2px; }
+.pp-field__req { color: var(--orange-text); margin-left: 2px; }
 
 .pp-input {
   width: 100%;
@@ -219,10 +219,18 @@ select.pp-input { appearance: none; padding-right: var(--s-6); cursor: pointer; 
   box-shadow: var(--clay-3);
   border-radius: var(--r-lg);
   padding: var(--s-5);
-  transition: box-shadow var(--t-base) var(--ease-out), transform var(--t-base) var(--ease-out);
+  /* §19: `transform` only. A card is the largest interactive clay in the
+     product — `.pp-open__card` on the payrun screen measures 589x364 at a
+     narrow width and grows from there — and §19 permits a `box-shadow`
+     transition only under ~400px a side. The shadow still changes on hover;
+     it simply snaps, and at a 2px lift the eye reads the movement, not the
+     shadow's ramp. Measured and fixed in the P14 performance pass. */
+  transition: transform var(--t-base) var(--ease-out);
 }
 .pp-card--interactive { cursor: pointer; }
 .pp-card--interactive:hover { box-shadow: var(--clay-3-hover); transform: translateY(-2px); }
+/* Promoted only while it is actually lifting, per §19. */
+.pp-card--interactive:hover { will-change: transform; }
 .pp-card--interactive:focus-visible { outline: 2px solid var(--cobalt-500); outline-offset: 3px; }
 
 /* --- BADGE / STATE CHIP · §09.4 ------------------------------------------ */

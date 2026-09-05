@@ -258,7 +258,7 @@
   transition: color var(--t-base) var(--ease-out), background var(--t-base) var(--ease-out);
 }
 
-.pp-day__clear:hover { color: var(--vermilion-500); background: var(--vermilion-tint); }
+.pp-day__clear:hover { color: var(--vermilion-text); background: var(--vermilion-tint); }
 
 .pp-day__hint { grid-area: times; color: var(--ink-400); margin: 0; }
 

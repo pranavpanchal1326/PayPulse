@@ -12,6 +12,7 @@
 @import "./leave.css";
 @import "./payroll.css";
 @import "./dashboard.css";
+@import "./landing.css";
 
 /* Surface the tokens as Tailwind utilities. `inline` so they resolve through
    the CSS variables and therefore respond to [data-theme]. */
@@ -87,12 +88,32 @@ button { font: inherit; color: inherit; background: none; border: none; padding:
 /* ==========================================================================
    05.2 THE TYPE SCALE
    Dramatic jumps, not a smooth ramp. The discontinuity is the point.
+
+   THE SIZES A LAYOUT MAY FIT ARE EXPOSED AS CUSTOM PROPERTIES.
+
+   These utilities are single-class rules emitted *after* every page
+   stylesheet, so a page that needs a display size to fit a box it does not
+   control — the landing's acts fit compositions to a stage — cannot override
+   `font-size` from its own file at equal specificity. It loses the cascade,
+   silently, and the rule reads as though it works. That happened three times
+   in one pass on `landing.css`, each time caught only by measuring the
+   computed value.
+
+   The answer is not to reorder the sheets or to layer them: both change how
+   *every* existing rule relates to these utilities, which is a large blast
+   radius for a small problem. Instead each fittable size is read through a
+   custom property with the scale's own value as the fallback. Nothing changes
+   for any existing caller — the default is exactly what was there before —
+   and a layout that must fit sets the variable on an ancestor, where
+   inheritance settles it without a specificity contest.
+
+   Set the variable; never restate `font-size`.
    ========================================================================= */
 
 .t-display-xl {
   font-family: var(--font-display);
-  font-size: clamp(72px, 11vw, 168px);
-  line-height: 0.86;
+  font-size: var(--fs-display-xl, clamp(72px, 11vw, 168px));
+  line-height: var(--lh-display-xl, 0.86);
   font-weight: 800;
   letter-spacing: -0.045em;
 }
@@ -105,8 +126,8 @@ button { font: inherit; color: inherit; background: none; border: none; padding:
 }
 .t-display-m {
   font-family: var(--font-display);
-  font-size: clamp(38px, 4.4vw, 68px);
-  line-height: 0.98;
+  font-size: var(--fs-display-m, clamp(38px, 4.4vw, 68px));
+  line-height: var(--lh-display-m, 0.98);
   font-weight: 700;
   letter-spacing: -0.03em;
 }
@@ -122,7 +143,7 @@ button { font: inherit; color: inherit; background: none; border: none; padding:
 .t-h2 { font-size: 23px; line-height: 1.2;  font-weight: 600; letter-spacing: -0.015em; }
 .t-h3 { font-size: 18px; line-height: 1.3;  font-weight: 600; letter-spacing: -0.01em; }
 
-.t-body-l { font-size: 17px; line-height: 1.65; }
+.t-body-l { font-size: var(--fs-body-l, 17px); line-height: var(--lh-body-l, 1.65); }
 .t-body   { font-size: 15px; line-height: 1.6; }
 .t-ui     { font-size: 14px; line-height: 1.45; font-weight: 450; }
 .t-ui-sm  { font-size: 13px; line-height: 1.4;  font-weight: 450; }
@@ -155,8 +176,8 @@ button { font: inherit; color: inherit; background: none; border: none; padding:
 
 .n-hero {
   font-family: var(--font-display);
-  font-size: clamp(64px, 9vw, 148px);
-  line-height: 0.88;
+  font-size: var(--fs-n-hero, clamp(64px, 9vw, 148px));
+  line-height: var(--lh-n-hero, 0.88);
   font-weight: 700;
   letter-spacing: -0.04em;
 }
@@ -169,7 +190,7 @@ button { font: inherit; color: inherit; background: none; border: none; padding:
 /* The currency mark and the decimals must not compete with the figure. */
 .n-cur { font-size: 0.72em; color: var(--ink-400); margin-right: 0.15em; }
 .n-dec { font-size: 0.62em; color: var(--ink-400); }
-.n-neg { color: var(--vermilion-500); }
+.n-neg { color: var(--vermilion-text); }
 
 /* ==========================================================================
    UTILITY

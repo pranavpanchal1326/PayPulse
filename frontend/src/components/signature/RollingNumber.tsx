@@ -95,7 +95,21 @@ function Digit({
           </span>
         ) : (
           <motion.span
-            className="pp-roll__col"
+            /*
+              `--rolling` carries the `will-change` (§19). It rides the
+              *animated* branch only, so a figure sitting still promotes
+              nothing — which is the whole point: this used to be on the base
+              class, and the landing page held **32 promoted compositor
+              layers at rest**.
+
+              It releases on the next value change rather than the instant the
+              roll ends. Releasing it on `onAnimationComplete` was tried and
+              did not work — the callback does not fire for every column, so
+              the state stuck *on*, which is worse than a bounded delay. The
+              residue is at most one layer per changed digit of one figure,
+              and only after an interaction. Measured, not assumed.
+            */
+            className="pp-roll__col pp-roll__col--rolling"
             initial={false}
             animate={{ y }}
             transition={{ duration: ROLL_SECONDS, ease: ease.out, delay }}

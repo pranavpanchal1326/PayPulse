@@ -45,7 +45,12 @@
   user-select: none;
 }
 
-.pp-avatar--inactive { opacity: 0.55; }
+/* Inactive was `opacity: 0.55`, which composites the initials down with the
+   disc and measured below 3:1 — an initial is text. The dimming is expressed
+   in tokens instead, so the recession is real and the contrast stays
+   governed: the disc sinks to the well floor, the ink holds at --ink-400
+   (5.42:1). Same read, legal. P14. */
+.pp-avatar--inactive { background: var(--bone-300); color: var(--ink-400); }
 
 /* ── S2 · Kanban ──────────────────────────────────────────────────────── */
 
@@ -108,8 +113,10 @@
   white-space: nowrap;
 }
 
+/* An empty state is the only copy on the screen; it cannot be the faintest
+   thing on it. --ink-400 is the lightest token cleared for text. P14. */
 .pp-kanban__empty {
-  color: var(--ink-300);
+  color: var(--ink-400);
   text-align: center;
   padding: var(--s-4) 0;
 }
@@ -190,7 +197,8 @@
 .pp-pair { display: flex; flex-direction: column; gap: var(--s-1); min-width: 0; }
 .pp-pair__k { color: var(--ink-400); margin: 0; }
 .pp-pair__v { margin: 0; overflow-wrap: anywhere; }
-.pp-pair__v--absent { color: var(--ink-300); }
+/* "Not recorded" is information, not a disabled control — --ink-400. P14. */
+.pp-pair__v--absent { color: var(--ink-400); }
 
 /* ── Forms ────────────────────────────────────────────────────────────── */
 
@@ -205,7 +213,7 @@
   padding: var(--s-3) var(--s-4);
   border-radius: var(--r-md);
   box-shadow: var(--inset-1);
-  color: var(--vermilion-500);
+  color: var(--vermilion-text);
 }
 
 /* ── Reference data (departments · job positions) ─────────────────────── */
@@ -223,4 +231,17 @@
   .pp-summary { grid-template-columns: repeat(2, 1fr); }
   .pp-ref { grid-template-columns: 1fr; }
   .pp-form__row { grid-template-columns: 1fr; }
+}
+
+/* --- §07.5 · REDUCED MOTION ---------------------------------------------
+   The object card was the one hover in the product that moved a box and had
+   no reduced-motion clause: `translate: 0 -1px` on hover, `0 1px` on press.
+   §07.5 says springs collapse to a 120ms fade, so the *position* does not
+   survive — but the elevation does, because the shadow is what says
+   "raised", and that is meaning rather than decoration. Found by the P14
+   reduced-motion pass. */
+@media (prefers-reduced-motion: reduce) {
+  .pp-person { transition-duration: 120ms !important; }
+  .pp-person:hover,
+  .pp-person:active { translate: none; }
 }

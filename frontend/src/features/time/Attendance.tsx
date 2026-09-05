@@ -14,21 +14,28 @@
  *
  * **The role decides what the screen offers, not what it disables.** §11:
  * `EMPLOYEE` has create and read on attendance and no update, so an employee
- * sees Check in / Check out and *no correction affordance at all* — not a
- * greyed one. A disabled control that a role can never enable is an
- * advertisement for a permission you do not have.
+ * sees *no correction affordance at all* — not a greyed one. A disabled
+ * control that a role can never enable is an advertisement for a permission
+ * you do not have.
+ *
+ * **Punching is not on this screen.** Check in and check out moved to the
+ * shell's clock, because "am I working right now" is a state the whole
+ * application is in and the most frequent action in the product should not
+ * require navigating to a register to perform. This screen still *shows* the
+ * open day — it reloads whenever the clock changes — it simply no longer owns
+ * a second pair of buttons that could disagree with the one in the top bar.
  */
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, LogIn, LogOut, Pencil, Plus } from "lucide-react";
+import { AlertTriangle, Pencil, Plus } from "lucide-react";
 import type { Attendance as Row, WorkingSchedule } from "@/api/contract";
 import { ATTENDANCE_STATUSES } from "@/api/contract";
-import { ApiError } from "@/api/errors";
 import { useQuery } from "@/api/useQuery";
 import { useAuth } from "@/auth/AuthContext";
 import { PageHeader } from "@/app/Shell";
+import { useClock } from "@/app/Clock";
 import {
-  Badge, Button, EmptyState, Select, StateChip, Table, Tooltip, WarningCard, cx, useToast,
+  Badge, Button, EmptyState, Select, Table, Tooltip, cx,
   type Column,
 } from "@/components/system";
 import { RollingCount } from "@/components/signature";
@@ -37,7 +44,7 @@ import { currentMonth, openPeriod } from "@/lib/clock";
 import {
   LoadFailure, clockOf, decimalLabel, formatDate, useFilterParams,
 } from "@/features/shared";
-import { checkIn, checkOut, listAllAttendance, listEmployees } from "./api";
+import { listAllAttendance, listEmployees } from "./api";
 import { listSchedules } from "@/features/contracts/api";
 import { MonthStrip } from "./MonthStrip";
 import { Correction } from "./Correction";
@@ -56,7 +63,6 @@ const DEFAULT_MONTH = openPeriod();
 
 export function Attendance() {
   const { user, can } = useAuth();
-  const toast = useToast();
   const filters = useFilterParams();
 
   const month = filters.get("month") ?? DEFAULT_MONTH;
@@ -66,8 +72,14 @@ export function Attendance() {
 
   const [correcting, setCorrecting] = useState<Row>();
   const [adding, setAdding] = useState(false);
-  const [actionError, setActionError] = useState<string>();
+  const clock = useClock();
 
+  /**
+   * `clock.version` is in the dependency list on purpose: a punch made from
+   * the top bar writes a row this register is very likely showing, and a
+   * register that needs a manual refresh to admit that you checked in is a
+   * register nobody trusts.
+   */
   const rows = useQuery(
     () =>
       listAllAttendance({
@@ -76,7 +88,7 @@ export function Attendance() {
         date_to: monthEnd(month),
         status: status as Row["status"],
       }),
-    [month, employeeId, status],
+    [month, employeeId, status, clock.version],
   );
   const employees = useQuery(() => listEmployees(), []);
   const schedules = useQuery(() => listSchedules(), []);
@@ -106,21 +118,6 @@ export function Attendance() {
     );
     return schedule ? Number(schedule.daily_hours) : 8;
   };
-
-  async function punch(kind: "in" | "out") {
-    setActionError(undefined);
-    try {
-      if (kind === "in") await checkIn({});
-      else await checkOut({});
-      toast(kind === "in" ? "Checked in." : "Checked out.", "jade");
-      rows.reload();
-    } catch (cause) {
-      // A 409 here is "you are already checked in" or "there is nothing open"
-      // — a state fact, not a failure, and it belongs on screen next to the
-      // buttons that produced it rather than in a toast that leaves.
-      setActionError(cause instanceof ApiError ? cause.message : "That did not work.");
-    }
-  }
 
   const columns: Column<Row>[] = useMemo(
     () => [
@@ -176,7 +173,27 @@ export function Attendance() {
         header: "Worked",
         accessorFn: (r) => Number(r.worked_hours),
         meta: { numeric: true },
-        cell: ({ row }) => decimalLabel(row.original.worked_hours),
+        /*
+          A half day is not a status the server stores — §3.4 computes hours
+          from the times and nothing else — so it is *read* here rather than
+          claimed: a closed row worth no more than half the schedule's day is
+          marked, and the mark disappears the moment a correction makes it
+          untrue.
+        */
+        cell: ({ row }) => {
+          const worked = Number(row.original.worked_hours);
+          const half = dailyHoursFor(row.original) / 2;
+          return (
+            <span className="pp-att__worked">
+              {decimalLabel(row.original.worked_hours)}
+              {row.original.check_out !== null && worked > 0 && worked <= half + 0.01 && (
+                <Tooltip label={`At or under half of this schedule's ${decimalLabel(String(half * 2))} hour day.`}>
+                  <Badge tone="cobalt">HALF</Badge>
+                </Tooltip>
+              )}
+            </span>
+          );
+        },
       },
       {
         id: "overtime",
@@ -235,7 +252,8 @@ export function Attendance() {
           ]
         : []),
     ],
-    [editable],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [editable, employees.data, schedules.data],
   );
 
   const filtered = employeeId !== undefined || status !== undefined || day !== undefined;
@@ -250,37 +268,14 @@ export function Attendance() {
             : "Loading attendance…"
         }
         action={
-          <div className="pp-form__row">
-            {can("attendance", "create") && isEmployee && (
-              <>
-                <Button size="md" variant="secondary" icon={<LogIn size={16} />} onClick={() => punch("in")}>
-                  Check in
-                </Button>
-                <Button size="md" variant="primary" icon={<LogOut size={16} />} onClick={() => punch("out")}>
-                  Check out
-                </Button>
-              </>
-            )}
-            {can("attendance", "create") && !isEmployee && (
-              <Button variant="primary" icon={<Plus size={16} />} onClick={() => setAdding(true)}>
-                Add a row
-              </Button>
-            )}
-          </div>
+          can("attendance", "create") &&
+          !isEmployee && (
+            <Button variant="primary" icon={<Plus size={16} />} onClick={() => setAdding(true)}>
+              Add a row
+            </Button>
+          )
         }
       />
-
-      {actionError && (
-        <div style={{ marginBottom: "var(--s-4)" }}>
-          <WarningCard
-            severity="warning"
-            code="punch_refused"
-            detail={actionError}
-            blocks="Nothing was recorded."
-            action={<Button size="sm" variant="quiet" onClick={() => setActionError(undefined)}>Dismiss</Button>}
-          />
-        </div>
-      )}
 
       {/* Three figures that answer "is this month clean?" before the table is
           read at all. Missing check-outs lead, because they are the one thing
@@ -421,12 +416,19 @@ export function Attendance() {
  * `MISSING_CHECKOUT` is not a lifecycle state, so it is not a `StateChip` —
  * it is a defect, and it takes the colour every other blocking defect in this
  * product takes.
+ *
+ * **Nor is `PRESENT`.** The clean case used to render `<StateChip state="ACTIVE" />`,
+ * so a perfectly ordinary attended day sat in the register labelled `ACTIVE` —
+ * a word from the *employee* lifecycle, borrowed for its green, saying
+ * something the column was not being asked. `ACTIVE` in this product means a
+ * contract or a person is current; a day is `PRESENT`. Four statuses come back
+ * from §3.4 and the column now shows the one it was given.
  */
 function AttendanceChip({ status }: { status: Row["status"] }) {
   if (status === "MISSING_CHECKOUT") return <Badge tone="vermilion">MISSING OUT</Badge>;
   if (status === "LATE") return <Badge tone="orange">LATE</Badge>;
   if (status === "OVERTIME") return <Badge tone="cobalt">OVERTIME</Badge>;
-  return <StateChip state="ACTIVE" />;
+  return <Badge tone="jade">PRESENT</Badge>;
 }
 
 function Figure({

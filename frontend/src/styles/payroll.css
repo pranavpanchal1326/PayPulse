@@ -197,7 +197,7 @@
 .pp-sandbox { display: grid; gap: var(--s-3); padding: var(--s-4); }
 .pp-sandbox--invalid { box-shadow: var(--inset-1), 0 0 0 2px var(--vermilion-500); }
 .pp-sandbox__label { margin: 0; color: var(--ink-400); letter-spacing: 0.08em; }
-.pp-sandbox__error { margin: 0; color: var(--vermilion-500); }
+.pp-sandbox__error { margin: 0; color: var(--vermilion-text); }
 
 .pp-sandbox__ctx {
   display: grid;
@@ -253,7 +253,7 @@
 }
 
 .pp-preview__editing { margin: 0; color: var(--ink-500); }
-.pp-preview__editing code { font-family: var(--font-mono); color: var(--cobalt-500); }
+.pp-preview__editing code { font-family: var(--font-mono); color: var(--cobalt-text); }
 
 .pp-preview__notes { display: grid; gap: var(--s-2); }
 
@@ -297,7 +297,7 @@
   flex-wrap: wrap;
 }
 
-.pp-open__period { margin: 0 0 var(--s-2); color: var(--cobalt-500); letter-spacing: 0.1em; }
+.pp-open__period { margin: 0 0 var(--s-2); color: var(--cobalt-text); letter-spacing: 0.1em; }
 
 .pp-open__figures {
   display: grid;
@@ -309,7 +309,10 @@
   box-shadow: var(--inset-1);
 }
 
-.pp-open__figure { display: grid; gap: var(--s-1); }
+/* Same grid `min-width: auto` overflow as `.pp-dash__figure` — the open
+   period's labels ran up to 51px past their track. See dashboard.css. */
+.pp-open__figure { display: grid; gap: var(--s-1); min-width: 0; }
+.pp-open__figure > * { min-width: 0; }
 .pp-open__figure p { margin: 0; color: var(--ink-400); letter-spacing: 0.08em; }
 
 .pp-open__cta {
@@ -317,7 +320,7 @@
   align-items: center;
   gap: var(--s-2);
   margin: 0;
-  color: var(--cobalt-500);
+  color: var(--cobalt-text);
 }
 
 /* ── S14 · S15 · the wizard ───────────────────────────────────────────── */
@@ -354,7 +357,7 @@
    directly under the well it describes. */
 .pp-wiz__notpersisted {
   margin: var(--s-3) 0 0;
-  color: var(--cobalt-500);
+  color: var(--cobalt-text);
   letter-spacing: 0.14em;
 }
 
@@ -422,12 +425,12 @@
 
 .pp-elig__days { display: grid; gap: var(--s-1); }
 .pp-elig__days .t-micro { color: var(--ink-400); font-variant-numeric: tabular-nums; }
-.pp-elig__prorated { color: var(--orange-500); }
+.pp-elig__prorated { color: var(--orange-text); }
 
 .pp-elig__wage { text-align: right; font-variant-numeric: tabular-nums; }
 
 .pp-elig__notes { display: grid; gap: var(--s-1); }
-.pp-elig__blocker { color: var(--vermilion-500); }
+.pp-elig__blocker { color: var(--vermilion-text); }
 .pp-elig__note { color: var(--ink-400); }
 
 /* ── S16 · the cockpit ────────────────────────────────────────────────── */
@@ -437,7 +440,12 @@
 .pp-rail__track {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: 1fr;
+  /* `minmax(0, 1fr)` and not `1fr`: a bare `1fr` carries an implicit `auto`
+     minimum, so no cell could shrink below its own label and the five-stage
+     track had a min-content width of ~705px. Under about 740px that pushed a
+     horizontal scrollbar onto whatever page it was on — found on the P13
+     landing, but the payrun cockpit had it too. The cells compress now. */
+  grid-auto-columns: minmax(0, 1fr);
   gap: var(--s-2);
   margin: 0;
   padding: 0;
@@ -448,6 +456,7 @@
   display: flex;
   align-items: center;
   gap: var(--s-2);
+  min-width: 0;
   padding: var(--s-3) var(--s-4);
   border-radius: var(--r-md);
   background: var(--bone-300);
@@ -472,7 +481,17 @@
   font: 400 11px/1 var(--font-mono);
 }
 
-.pp-rail__label { letter-spacing: 0.1em; }
+/* Once the cells can compress, the label is what has to give — it truncates
+   rather than forcing its cell wide. The stage's `--done/--current/--blocked`
+   state is carried by the mark and the ground as well, so a clipped label
+   never leaves the rail unreadable. */
+.pp-rail__label {
+  letter-spacing: 0.1em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* Completed stages fill jade and rise — they are objects now, not slots. */
 .pp-rail__stage--done {
@@ -493,9 +512,19 @@
 }
 .pp-rail__stage--current .pp-rail__mark { background: var(--cobalt-500); color: var(--on-solid); }
 
-/* Stuck: the same stage, in the colour of a thing that has stopped. */
+/* Stuck: the same stage, in the colour of a thing that has stopped — and it
+   breathes, slowly, because a rail that has halted mid-run is the one thing on
+   the screen that must not be mistaken for a rail that is merely idle. Two
+   seconds a cycle: an indicator, not an alarm. */
 .pp-rail__stage--blocked {
   box-shadow: var(--clay-2), 0 0 0 2px var(--vermilion-500);
+  animation: pp-rail-held 2.2s var(--ease-in-out) infinite;
+}
+@keyframes pp-rail-held {
+  0%, 100% { box-shadow: var(--clay-2), 0 0 0 2px var(--vermilion-500),
+                          0 0 0 0 color-mix(in srgb, var(--vermilion-500) 40%, transparent); }
+  55%      { box-shadow: var(--clay-2), 0 0 0 2px var(--vermilion-500),
+                          0 0 0 7px color-mix(in srgb, var(--vermilion-500) 0%, transparent); }
 }
 .pp-rail__stage--blocked .pp-rail__mark { background: var(--vermilion-500); color: var(--on-solid); }
 
@@ -512,6 +541,10 @@
 }
 
 /* §07.5 — the meaning survives, the movement does not. */
+@media (prefers-reduced-motion: reduce) {
+  .pp-rail__stage--blocked { animation: none !important; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pp-rail__track--sweeping .pp-rail__stage {
     animation: none;
@@ -599,8 +632,8 @@
   color: var(--ink-400);
 }
 
-.pp-inbox__count--error { color: var(--vermilion-500); }
-.pp-inbox__count--warning { color: var(--orange-500); }
+.pp-inbox__count--error { color: var(--vermilion-text); }
+.pp-inbox__count--warning { color: var(--orange-text); }
 
 .pp-inbox__list {
   display: grid;
@@ -676,7 +709,7 @@
 
 .pp-slip__day { display: grid; gap: var(--s-1); }
 .pp-slip__day .t-micro { color: var(--ink-400); letter-spacing: 0.06em; }
-.pp-slip__day--warn { color: var(--orange-500); }
+.pp-slip__day--warn { color: var(--orange-text); }
 
 .pp-slip__lines { padding: var(--s-5); display: grid; gap: var(--s-4); }
 
@@ -703,7 +736,7 @@
 }
 
 .pp-slip__line:hover { background: var(--bone-200); }
-.pp-slip__line--deduct .pp-slip__lineamount { color: var(--vermilion-500); }
+.pp-slip__line--deduct .pp-slip__lineamount { color: var(--vermilion-text); }
 .pp-slip__line--failed { background: var(--orange-tint); }
 
 .pp-slip__linename { display: inline-flex; align-items: baseline; gap: var(--s-2); flex-wrap: wrap; }
@@ -745,3 +778,109 @@
 .pp-stack--narrow { grid-template-columns: minmax(0, 1fr); gap: var(--s-4); }
 .pp-stack--narrow .pp-stack__svg { height: 340px; margin-inline: auto; }
 .pp-stack--narrow .pp-stack__inspect { min-width: 0; }
+
+
+/* --- THE OPEN RUN'S RAIL --------------------------------------------------
+   Inside the card, so it is separated from the figures by a rule rather than
+   by a gap — the figures are *what* the run is, the rail is *where* it is,
+   and they are two readings of one object. */
+
+.pp-open__rail {
+  margin-top: var(--s-5);
+  padding-top: var(--s-5);
+  border-top: 1px solid var(--bone-600);
+}
+.pp-open__rail .pp-rail { margin-bottom: 0; }
+/* The card is the control; nothing inside it takes the press. */
+.pp-open__rail .pp-rail__stage { pointer-events: none; }
+
+/* --- THE RHYTHM RIBBON ----------------------------------------------------
+   Twelve months of net as proportional columns, above the register. The
+   columns are the same figures the table rows carry and they open the same
+   run — this is a way *into* the history, not a second copy of it. */
+
+.pp-rhythm {
+  margin: var(--s-6) 0 var(--s-5);
+  padding: var(--s-5);
+  border-radius: var(--r-lg);
+  background: var(--bone-300);
+  box-shadow: var(--inset-1);
+}
+
+.pp-rhythm__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-5);
+  flex-wrap: wrap;
+  margin-bottom: var(--s-5);
+}
+.pp-rhythm__kicker { margin: 0 0 var(--s-1); color: var(--ink-400); }
+.pp-rhythm__note   { margin: 0; color: var(--ink-500); max-width: 56ch; }
+.pp-rhythm__peak   { margin: 0 0 0 auto; color: var(--ink-500); white-space: nowrap; }
+
+.pp-rhythm__track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  align-items: end;
+  gap: var(--s-2);
+  height: 132px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pp-rhythm__col { display: flex; min-width: 0; height: 100%; }
+
+.pp-rhythm__hit {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: var(--s-2);
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  cursor: pointer;
+}
+
+.pp-rhythm__bar-well { display: flex; align-items: flex-end; justify-content: center; min-height: 0; }
+
+/* Capped, and centred in its cell. Five closed runs in a full-width track
+   would otherwise draw five slabs rather than five columns, and the ribbon
+   would read as a stacked bar rather than as a rhythm. */
+.pp-rhythm__bar {
+  width: 100%;
+  max-width: 44px;
+  border-radius: var(--r-xs) var(--r-xs) 0 0;
+  background: var(--cobalt-500);
+  box-shadow: var(--clay-1);
+  transition:
+    background var(--t-quick) var(--ease-out),
+    transform var(--t-quick) var(--ease-out);
+  transform-origin: bottom;
+}
+.pp-rhythm__hit:hover .pp-rhythm__bar,
+.pp-rhythm__hit:focus-visible .pp-rhythm__bar {
+  background: var(--cobalt-deep);
+  transform: scaleX(1.06);
+}
+
+.pp-rhythm__month {
+  color: var(--ink-400);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pp-rhythm__hit:hover .pp-rhythm__month { color: var(--ink-900); }
+
+@media (prefers-reduced-motion: reduce) {
+  .pp-rhythm__bar { transition: background var(--t-quick) var(--ease-out); }
+  .pp-rhythm__hit:hover .pp-rhythm__bar { transform: none; }
+}
+
+@media (max-width: 720px) {
+  .pp-rhythm__track { height: 96px; }
+  .pp-rhythm__peak { margin-left: 0; }
+}

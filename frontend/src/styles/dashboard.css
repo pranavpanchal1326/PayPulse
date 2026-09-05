@@ -44,6 +44,17 @@
   transform: translateY(-2px);
 }
 
+/* A grid item's default `min-width: auto` refuses to shrink below its
+   min-content width, so the label and the support line forced the `1fr`
+   track wider than the card and painted 43px past its right edge. `0` lets
+   them wrap, which is what they were always meant to do.
+
+   This only became visible in P14, when the display and text faces were
+   named correctly for the first time (P14 finding 9) — the layout had been
+   tuned, unknowingly, against a narrower `system-ui` fallback. */
+.pp-dash__figure,
+.pp-dash__figure > * { min-width: 0; }
+
 .pp-dash__figurelabel { color: var(--ink-400); letter-spacing: 0.1em; }
 .pp-dash__figuresupport { color: var(--ink-500); }
 
@@ -92,12 +103,12 @@
 .pp-dash__stat dd { margin: 0; }
 
 .pp-dash__statv { color: var(--ink-900); font-variant-numeric: tabular-nums; }
-.pp-dash__statv--orange { color: var(--orange-500); }
-.pp-dash__statv--cobalt { color: var(--cobalt-500); }
-.pp-dash__statv--vermilion { color: var(--vermilion-500); }
+.pp-dash__statv--orange { color: var(--orange-text); }
+.pp-dash__statv--cobalt { color: var(--cobalt-text); }
+.pp-dash__statv--vermilion { color: var(--vermilion-text); }
 
 .pp-dash__low { display: grid; gap: var(--s-2); }
-.pp-dash__low .t-micro { margin: 0; color: var(--orange-500); letter-spacing: 0.1em; }
+.pp-dash__low .t-micro { margin: 0; color: var(--orange-text); letter-spacing: 0.1em; }
 .pp-dash__low ul { margin: 0; padding-left: var(--s-5); display: grid; gap: var(--s-1); color: var(--ink-500); }
 
 .pp-dash__pending { margin: 0; }
@@ -224,4 +235,7 @@
 
 /* The trend's axis starts near the data, not at zero, so the caption says so —
    an unlabelled non-zero baseline is the oldest chart lie there is. */
-.pp-trend__axisnote { color: var(--ink-300); }
+/* `--ink-300` is "disabled ink, chart gridlines" — it is not a text token,
+   and this caveat measured 1.94:1 at 13px. It is the one line that stops a
+   reader misjudging the trend, so it reads at --ink-400. P14. */
+.pp-trend__axisnote { color: var(--ink-400); }

@@ -380,7 +380,22 @@ export default function StackScene({
         intensity={2.2}
         color={palette.key}
         castShadow
-        shadow-mapSize={[1024, 1024]}
+        /*
+          512, not 1024. `frameloop="demand"` means the scene renders only
+          while act 04 is being scrubbed — but during that scrub it renders
+          every frame, and every frame re-renders the shadow map, because the
+          blocks are moving. Quartering the map's fill is free here: the
+          subject is a ten-block tower at six units, and the shadow it casts
+          is soft-edged clay rather than a hard silhouette.
+
+          **This whole light is a standing conflict with §19**, which says
+          "no post-processing, no shadow maps — shadows are baked into the
+          material". The scene was built with a real cast shadow and is tuned
+          for one (`shadow-bias`, the shadow camera bounds), so removing it is
+          a visible design change and not P14's call to make. Flagged in the
+          build plan instead. P14 smoothness pass.
+        */
+        shadow-mapSize={[512, 512]}
         shadow-camera-near={1}
         shadow-camera-far={24}
         shadow-bias={-0.0012}

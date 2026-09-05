@@ -19,6 +19,8 @@
 /* Data & code. */
 @import "@fontsource-variable/geist-mono/wght.css";
 
-/* Editorial · used two or three times in the entire product. */
-@import "@fontsource/instrument-serif/latin-400.css";
+/* Editorial · `.t-quote` is its only consumer and `.t-quote` is italic, so the
+   upright cut was 20.5 kB that no rule in the product could ever select. The
+   italic stays; the upright is gone. Measured in the P14 font pass, which is
+   §22 item 7. */
 @import "@fontsource/instrument-serif/latin-400-italic.css";

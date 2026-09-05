@@ -81,6 +81,14 @@
   24%      { transform: scale(1);    opacity: 0.8; }
   36%      { transform: scale(1.25); opacity: 1; }
 }
+/* Off the clock: the light is out, not merely paused — and it is drawn as the
+   same hollow vermilion ring the top bar's clock uses, so "a red ring" means
+   one thing in this product rather than two. */
+.pp-pulse--off {
+  animation: none;
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--vermilion-500);
+}
 
 /* --- TOP BAR ------------------------------------------------------------- */
 
@@ -99,6 +107,133 @@
   border-bottom: 1px solid var(--bone-600);
 }
 .pp-topbar__actions { margin-left: auto; display: flex; align-items: center; gap: var(--s-1); }
+.pp-topbar__split {
+  width: 1px;
+  height: 20px;
+  margin: 0 var(--s-2);
+  background: var(--bone-600);
+}
+
+/* --- THE CLOCK · the punch control -----------------------------------------
+   A round key with a light in it, and a two-line reading beside it. It is the
+   only control in the top bar that carries state rather than an action, so it
+   is the only one that is not a bare icon button. */
+
+.pp-clock {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  height: 34px;
+  padding: 0 var(--s-2) 0 var(--s-1);
+  border-radius: var(--r-full);
+  background: var(--bone-300);
+  box-shadow: var(--inset-1);
+  transition: background var(--t-base) var(--ease-out), box-shadow var(--t-base) var(--ease-out);
+}
+.pp-clock--on {
+  background: color-mix(in srgb, var(--jade-tint) 70%, var(--bone-200));
+  box-shadow: var(--inset-1), 0 0 0 1px color-mix(in srgb, var(--jade-500) 26%, transparent);
+}
+
+.pp-clock__key {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--r-full);
+  background: var(--bone-50);
+  box-shadow: var(--clay-1);
+  color: var(--ink-500);
+  cursor: pointer;
+  transition: transform var(--t-instant) var(--ease-out), box-shadow var(--t-quick) var(--ease-out);
+}
+.pp-clock__key:hover  { box-shadow: var(--clay-2-hover); }
+.pp-clock__key:active { transform: translateY(1px); box-shadow: var(--clay-pressed); }
+.pp-clock__key:disabled { opacity: 0.55; cursor: progress; }
+
+/* The glyph only appears on hover — at rest the key is the light. Pressing
+   for the thing you can see is a better read than pressing for a label. */
+.pp-clock__glyph {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transition: opacity var(--t-quick) var(--ease-out);
+}
+.pp-clock__key:hover .pp-clock__glyph,
+.pp-clock__key:focus-visible .pp-clock__glyph { opacity: 1; }
+.pp-clock__key:hover .pp-clock__light,
+.pp-clock__key:focus-visible .pp-clock__light { opacity: 0; }
+
+.pp-clock__light {
+  width: 9px;
+  height: 9px;
+  border-radius: var(--r-full);
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--vermilion-500);
+  transition: opacity var(--t-quick) var(--ease-out);
+}
+/* On the clock: solid jade, beating, with a halo that beats with it. */
+.pp-clock--on .pp-clock__light {
+  background: var(--jade-500);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--jade-500) 55%, transparent);
+  animation: pp-clock-live 1.8s var(--ease-in-out) infinite;
+}
+@keyframes pp-clock-live {
+  0%   { box-shadow: 0 0 0 0   color-mix(in srgb, var(--jade-500) 60%, transparent); opacity: 1; }
+  55%  { box-shadow: 0 0 0 6px color-mix(in srgb, var(--jade-500) 0%,  transparent); opacity: 0.6; }
+  100% { box-shadow: 0 0 0 0   color-mix(in srgb, var(--jade-500) 0%,  transparent); opacity: 1; }
+}
+
+.pp-clock__read { display: grid; line-height: 1.05; min-width: 76px; }
+.pp-clock__state   { color: var(--ink-400); }
+.pp-clock--on .pp-clock__state { color: var(--jade-text); }
+.pp-clock__elapsed { color: var(--ink-900); font-variant-numeric: tabular-nums; }
+
+.pp-clock__menu { position: relative; display: inline-flex; }
+.pp-clock__more {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--ink-400);
+  cursor: pointer;
+}
+.pp-clock__more:hover { background: var(--bone-400); color: var(--ink-900); }
+
+/* A refusal — "you are already checked in" — sits under the control that
+   produced it rather than in a toast that leaves before it is read. */
+.pp-clock__refusal {
+  position: absolute;
+  top: calc(100% + var(--s-2));
+  right: 0;
+  z-index: var(--z-tooltip);
+  width: max-content;
+  max-width: 280px;
+  margin: 0;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--vermilion-tint);
+  color: var(--vermilion-deep);
+  box-shadow: var(--clay-2);
+}
+
+@media (max-width: 1080px) {
+  .pp-clock__target { display: none; }
+  .pp-clock__read { min-width: 76px; }
+}
+
+@media (max-width: 900px) {
+  .pp-clock__read { display: none; }
+  .pp-clock { padding-right: var(--s-1); }
+}
 
 .pp-crumbs { display: flex; align-items: center; gap: var(--s-2); font-size: 13px; color: var(--ink-500); }
 .pp-crumbs__sep { color: var(--ink-400); margin: 0 var(--s-2); }
@@ -219,7 +354,16 @@
 
 @media (max-width: 1024px) {
   .pp-shell { grid-template-columns: 64px minmax(0, 1fr); }
-  .pp-navitem span, .pp-sidebar__brand span, .pp-sidebar__who, .pp-sidebar__pulse span { display: none; }
+  /* The rail collapses to icons, but a nav link's only accessible name is
+     that span. `display: none` took it out of the accessibility tree, which
+     left all six sections nameless to a screen reader at exactly the width
+     §21 requires us to support. Clipped, not removed — sighted users lose
+     the label, assistive tech does not. Found by the P14 axe pass. */
+  .pp-navitem span {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+  .pp-sidebar__brand span, .pp-sidebar__who, .pp-sidebar__pulse span { display: none; }
   .pp-navitem { justify-content: center; padding: 0; }
   .pp-sidebar { align-items: center; }
   .pp-content { padding: var(--s-5); }
@@ -232,5 +376,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .pp-pulse { animation: none !important; }
+  .pp-clock--on .pp-clock__light { animation: none !important; }
   .pp-navitem, .pp-cmd__item, .pp-skip { transition-duration: 120ms !important; }
 }

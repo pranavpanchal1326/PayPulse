@@ -67,6 +67,20 @@
   --vermilion-solid: #C0272C;
   --on-solid:        #FFFFFF;
 
+  /* SIGNAL AS TEXT · the mirror case, added in P14.
+     `-solid` answers "a signal covers an area, what colour is the text on
+     it". It does not answer "the text IS the signal" — a figure coloured by
+     its own meaning, on the ordinary ground. P12's dashboard reached for the
+     500s there and measured 2.14:1 (orange), 2.94:1 (vermilion) and 4.47:1
+     (cobalt) at 13px, which is the P0 failure again in a new place.
+     Each hue is darkened only until it clears 4.5:1 on `--bone-300`, the
+     inset well floor — the darkest ground text sits on — so the hue survives
+     and the reading is legal. Fills, dots, borders and charts keep the 500. */
+  --cobalt-text:     #2A4DF0;   /* 4.63:1 on the well · 5.75:1 on a card */
+  --orange-text:     #A3451C;   /* 4.62:1 on the well · 5.73:1 on a card */
+  --jade-text:       #0A7045;   /* 4.63:1 on the well · 5.75:1 on a card */
+  --vermilion-text:  #AE373B;   /* 4.64:1 on the well · 5.76:1 on a card */
+
   /* --- 02 MATERIAL · the light model made numeric ----------------------
      Shadow colour is WARM. Highlight comes from above, shade from below.  */
   --clay-hl-1: rgb(255 255 255 / 0.90);
@@ -145,10 +159,29 @@
 
   --grain-opacity: 0.028;
 
-  /* --- 05.1 TYPE ------------------------------------------------------- */
-  --font-display: "Bricolage Grotesque", "Geist", system-ui, sans-serif;
-  --font-sans:    "Geist", system-ui, -apple-system, sans-serif;
-  --font-mono:    "Geist Mono", ui-monospace, "SF Mono", monospace;
+  /* --- 05.1 TYPE -------------------------------------------------------
+     THE NAMES MUST MATCH THE @font-face, and for three of the four families
+     they did not. `@fontsource-variable` registers its variable faces as
+     "Bricolage Grotesque **Variable**", "Geist **Variable**" and "Geist Mono
+     **Variable**"; these tokens asked for the names without the suffix, so
+     no rule in the product ever named a downloaded face, no face was ever
+     activated, and every heading, every body line and every figure fell
+     straight through to `system-ui` / `ui-monospace`.
+
+     Measured, not guessed: `measureText("Reports Payroll 47,842")` at 40px
+     returned **390.92px for `--font-display`, `--font-sans` and bare
+     `system-ui` alike**, and 402.95px once the real face was force-loaded by
+     its declared name. So §05 has been inert since P1 — including §05.3's
+     number scale, which exists because Geist was chosen for its tabular
+     figures. Silent, because a fallback is not an error.
+
+     The canonical variable name leads; the plain name is kept behind it so a
+     static cut can be dropped in without touching this block. Instrument
+     Serif was always correct — @fontsource registers it unsuffixed.
+     Found by the P14 font pass. */
+  --font-display: "Bricolage Grotesque Variable", "Bricolage Grotesque", "Geist Variable", system-ui, sans-serif;
+  --font-sans:    "Geist Variable", "Geist", system-ui, -apple-system, sans-serif;
+  --font-mono:    "Geist Mono Variable", "Geist Mono", ui-monospace, "SF Mono", monospace;
   --font-voice:   "Instrument Serif", Georgia, serif;
 
   /* --- 06.1 SPACING · 4px base. Values outside this scale are forbidden. */
@@ -233,6 +266,15 @@
   --jade-solid:      #2ECB88;
   --vermilion-solid: #FF6B6F;
   --on-solid:        #241F19;
+
+  /* In the dark room the bright signals already clear 4.5:1 as text on every
+     dark ground including the clay tops (measured: 4.80 / 5.52 / 6.56 / 4.97
+     on `--bone-50`), so the text tokens are the solids. Two names, one value,
+     on purpose — the call site keeps meaning the same thing in both themes. */
+  --cobalt-text:     #7A91FF;
+  --orange-text:     #FF8046;
+  --jade-text:       #2ECB88;
+  --vermilion-text:  #FF6B6F;
 
   /* Highlight weakens and warms. Drop shadow strengthens and goes near-black. */
   --clay-hl-1: rgb(255 244 225 / 0.07);

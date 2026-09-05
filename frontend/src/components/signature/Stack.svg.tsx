@@ -137,7 +137,23 @@ export function Stack({ blocks, gross, net, onOpen, className }: StackProps) {
         <svg
           className="pp-stack__svg"
           viewBox={`0 0 ${W} ${H}`}
-          role="img"
+          /*
+            `role="group"`, not `role="img"`.
+
+            `img` declares the subtree a single flat graphic, so a screen
+            reader prunes everything inside it — but every block in here is a
+            `role="button"` with `tabIndex={0}`, because §10.3 says every
+            displayed number can be opened. The two together produced tab
+            stops that announced nothing: a keyboard user could land on eight
+            invisible controls. axe: `nested-interactive`.
+
+            `group` keeps the `<title>` as the accessible name of the whole
+            diagram *and* leaves the blocks in the tree, which is what a
+            figure you can operate actually is. Found by the P14 pass on the
+            landing, where this renders as the flat substitute below 768px —
+            it is the same component the payslip screen uses.
+          */
+          role="group"
           aria-labelledby={titleId}
         >
           <title id={titleId}>
