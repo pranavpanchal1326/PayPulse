@@ -11,8 +11,6 @@ import logging
 from decimal import Decimal
 
 from jinja2 import Environment, select_autoescape
-from sqlalchemy.orm import Session
-
 from app.core.config import settings
 from app.core.enums import RuleCategory
 from app.models.payroll import Payslip
@@ -124,7 +122,7 @@ def _money(value: Decimal) -> str:
     return f"{'-' if negative else ''}{whole}.{frac}"
 
 
-def render_html(db: Session, payslip: Payslip) -> str:
+def render_html(payslip: Payslip) -> str:
     employee = payslip.employee
     earnings = [
         line
@@ -175,13 +173,13 @@ def render_html(db: Session, payslip: Payslip) -> str:
     )
 
 
-def render_payslip(db: Session, payslip: Payslip) -> tuple[bytes, str, str]:
+def render_payslip(payslip: Payslip) -> tuple[bytes, str, str]:
     """Return (content, media_type, extension).
 
     Falls back to HTML if WeasyPrint is missing, so the demo never dies at
     the last step of the flow.
     """
-    html = render_html(db, payslip)
+    html = render_html(payslip)
     try:
         from weasyprint import HTML  # imported lazily: heavy, and optional
 

@@ -10,7 +10,7 @@ whether something blocks.
 """
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.core.enums import WarningCode, WarningSeverity
@@ -68,10 +68,7 @@ def record(
 
 def clear(db: Session, payrun_id: int) -> None:
     """Drop a payrun's warnings before recompute, so they never accumulate."""
-    for warning in db.scalars(
-        select(PayrollWarning).where(PayrollWarning.payrun_id == payrun_id)
-    ):
-        db.delete(warning)
+    db.execute(delete(PayrollWarning).where(PayrollWarning.payrun_id == payrun_id))
 
 
 def blocking_for(

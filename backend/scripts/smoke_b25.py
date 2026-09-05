@@ -18,17 +18,11 @@ from datetime import date
 
 from sqlalchemy import select
 
+from scripts._smoke import check, finish
+
 from app.db.session import SessionLocal
 from app.models.employee import Employee
 from app.services import calendar, contract_resolver
-
-passed = failed = 0
-
-
-def check(ok, label, detail=""):
-    global passed, failed
-    passed, failed = passed + bool(ok), failed + (not ok)
-    print(f"  {'PASS' if ok else 'FAIL'}  {label}{f'  [{detail}]' if detail else ''}")
 
 
 print("B2.5 smoke test\n")
@@ -176,5 +170,4 @@ with SessionLocal() as db:
     check(empty.contract_days == 0, "no contract means no contract days")
     check(empty.period_days > 0, "but the denominator still exists")
 
-print(f"\n{passed} passed, {failed} failed")
-sys.exit(1 if failed else 0)
+sys.exit(finish("B2.5"))

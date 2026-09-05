@@ -6,7 +6,7 @@ duplicate-day constraint fires, that corrections are restricted and always
 attributed, and that absence comes out derived rather than stored.
 
 Run against a seeded stack:
-    docker compose exec api python scripts/smoke_b3.py
+    docker compose exec api python -m scripts.smoke_b3
 
 Creates one throwaway employee. Clear between runs with:
     docker compose exec db psql -U peoplepay -d peoplepay360 -c \
@@ -14,52 +14,12 @@ Creates one throwaway employee. Clear between runs with:
 """
 from __future__ import annotations
 
-import json
 import sys
-import urllib.error
-import urllib.request
 from datetime import UTC, date, datetime, timedelta, timezone
 
-BASE = "http://localhost:8000/api/v1"
-PASSWORD = "paypulse"
+from scripts._smoke import call, check, finish, login
+
 IST = timezone(timedelta(hours=5, minutes=30))
-
-passed = failed = 0
-
-
-def check(ok, label, detail=""):
-    global passed, failed
-    passed, failed = passed + bool(ok), failed + (not ok)
-    print(f"  {'PASS' if ok else 'FAIL'}  {label}{f'  [{detail}]' if detail else ''}")
-
-
-def call(method, path, token=None, body=None, expect=200):
-    request = urllib.request.Request(
-        f"{BASE}{path}",
-        method=method,
-        data=json.dumps(body).encode() if body is not None else None,
-        headers={
-            "Content-Type": "application/json",
-            **({"Authorization": f"Bearer {token}"} if token else {}),
-        },
-    )
-    try:
-        with urllib.request.urlopen(request) as response:
-            status, payload = response.status, json.loads(response.read() or b"{}")
-    except urllib.error.HTTPError as exc:
-        status, payload = exc.code, json.loads(exc.read() or b"{}")
-    ok = status == expect
-    check(ok, f"{method:6} {path:46} -> {status}")
-    if not ok:
-        print(f"        expected {expect}, body={payload}")
-    return payload
-
-
-def login(email):
-    return call("POST", "/auth/login", body={"email": email, "password": PASSWORD})[
-        "access_token"
-    ]
-
 
 
 def ist(d: date, hh: int, mm: int = 0) -> str:
@@ -360,5 +320,4 @@ call(
 check(True, "EMPLOYEE cannot record attendance for someone else")
 call("GET", "/attendances", None, expect=401)
 
-print(f"\n{passed} passed, {failed} failed")
-sys.exit(1 if failed else 0)
+sys.exit(finish("B3"))

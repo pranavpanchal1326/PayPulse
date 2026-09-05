@@ -489,7 +489,7 @@ def get_payslip(payslip_id: int, db: DbSession, ctx: slip_read) -> PayslipOut:
 def payslip_pdf(payslip_id: int, db: DbSession, ctx: slip_read) -> Response:
     """Print Payslip (spec B8)."""
     payslip = _get_payslip(db, payslip_id, ctx)
-    content, media_type, extension = pdf.render_payslip(db, payslip)
+    content, media_type, extension = pdf.render_payslip(payslip)
     return Response(
         content=content,
         media_type=media_type,

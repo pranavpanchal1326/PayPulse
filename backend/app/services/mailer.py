@@ -92,7 +92,7 @@ def send_payslips(payslip_ids: list[int]) -> dict:
 
             for payslip in payslips:
                 try:
-                    content, _, extension = pdf.render_payslip(db, payslip)
+                    content, _, extension = pdf.render_payslip(payslip)
                     server.send_message(
                         _build_message(payslip, content, extension)
                     )

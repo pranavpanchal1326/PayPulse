@@ -5,7 +5,7 @@ covers the half that only real Postgres can prove: that concurrent active
 contracts are actually impossible (spec A2).
 
 Run against a seeded stack:
-    docker compose exec api python scripts/smoke_b2.py
+    docker compose exec api python -m scripts.smoke_b2
 
 Creates one throwaway employee and its contracts. Clear between runs with:
     docker compose exec db psql -U peoplepay -d peoplepay360 -c \
@@ -13,51 +13,10 @@ Creates one throwaway employee and its contracts. Clear between runs with:
 """
 from __future__ import annotations
 
-import json
 import sys
-import urllib.error
-import urllib.request
-
-BASE = "http://localhost:8000/api/v1"
-PASSWORD = "paypulse"
-
-passed = failed = 0
 
 
-def check(ok, label):
-    global passed, failed
-    passed, failed = passed + bool(ok), failed + (not ok)
-    print(f"  {'PASS' if ok else 'FAIL'}  {label}")
-
-
-def call(method, path, token=None, body=None, expect=200):
-    request = urllib.request.Request(
-        f"{BASE}{path}",
-        method=method,
-        data=json.dumps(body).encode() if body is not None else None,
-        headers={
-            "Content-Type": "application/json",
-            **({"Authorization": f"Bearer {token}"} if token else {}),
-        },
-    )
-    try:
-        with urllib.request.urlopen(request) as response:
-            status, payload = response.status, json.loads(response.read() or b"{}")
-    except urllib.error.HTTPError as exc:
-        status, payload = exc.code, json.loads(exc.read() or b"{}")
-
-    ok = status == expect
-    check(ok, f"{method:6} {path:52} -> {status}")
-    if not ok:
-        print(f"        expected {expect}, body={payload}")
-    return payload
-
-
-def login(email):
-    return call("POST", "/auth/login", body={"email": email, "password": PASSWORD})[
-        "access_token"
-    ]
-
+from scripts._smoke import call, check, finish, login
 
 
 print("B2 smoke test\n")
@@ -263,5 +222,4 @@ call("GET", f"/contracts?employee_id={eid}", emp, expect=403)
 call("POST", "/contracts", emp, {}, expect=403)
 call("GET", "/contracts", None, expect=401)
 
-print(f"\n{passed} passed, {failed} failed")
-sys.exit(1 if failed else 0)
+sys.exit(finish("B2"))
