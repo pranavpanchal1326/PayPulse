@@ -56,8 +56,9 @@ looks wrong, the database is wrong, not the log.
 
 - **40 employees** across 3 departments and 3 working schedules (40h standard,
   20h part-time, 35h night shift)
-- **6 payruns**, March–August 2026. Five `PAID`, **August left `COMPUTED`** so
-  you can walk validate → mark-paid live
+- **6 payruns**, March–August 2026. Five `PAID`, and **the latest month is
+  left `DRAFT`** on purpose, so you can drive a batch through the whole
+  lifecycle live
 - **A mid-period raise** — Sneha Patil's contract changes on **16 July 2026**
 - Leave allocations including **12 hours of Compensatory Off for everyone**,
   the only hours-unit type
@@ -130,9 +131,12 @@ raise lands on 16 July 2026, so payrun 5 (July) carries
 `MULTI_CONTRACT_PERIOD` and `PRORATED_PERIOD`. Opening August shows only
 `MISSING_CHECKOUT` and `MISSING_BANK_DETAILS`.
 
-**August is deliberately mid-lifecycle.** It sits in `COMPUTED`, so you can
-run validate → mark-paid live in front of an audience. The five earlier months
-are already `PAID` if you want finished examples.
+**The latest payrun is left `DRAFT` on purpose.** A fresh seed leaves August
+2026 in `DRAFT` so you can run compute → validate → mark-paid live. The five
+earlier months are already `PAID` if you want finished examples.
+
+If you have been clicking around, August may already be `COMPUTED` or further
+along. `POST /payruns/{id}/reopen` walks it back, or re-seed from scratch.
 
 ### A demo path that works
 
@@ -144,8 +148,8 @@ are already `PAID` if you want finished examples.
 4. **Leave → Balances** → Compensatory Off reads in **hours**; request some
    and watch the balance move. Ask for more than is left and approval is
    refused, not warned.
-5. **Payroll → August 2026** → compute, validate, mark paid. Warnings gate
-   each step.
+5. **Payroll → August 2026** (the `DRAFT` one) → compute, validate, mark
+   paid. Warnings gate each step.
 6. **A payslip → PDF** → a real rendered document, and
    `POST /payruns/{id}/send-payslips` puts real mail in **Mailpit**
    (http://localhost:8025).
