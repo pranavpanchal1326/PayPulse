@@ -6,7 +6,7 @@
 
 **Version 3.0** · supersedes v2 and v1 (v1 archived at `docs/PRD-v1.md`, git `b618137`)
 Team: **Aditya** (backend) · **Pranav** (frontend) · Odoo Hackathon · ~36–48h build window
-Status: **B0 + B1 shipped.** B0 = scaffold, Compose, JWT, RBAC matrix (`99bfacc`). B1 = departments, job positions, working schedules with computed hours, and the Employee hub with manager/joining/exit and `/employees/{id}/summary`. B2 onward open.
+Status: **B0 + B1 + B2 shipped.** B0 = scaffold, Compose, JWT, RBAC matrix (`99bfacc`). B1 = departments, job positions, working schedules with computed hours, and the Employee hub (`d9bc2d3`). B2 = contracts, the Postgres exclusion constraint, and the contract resolver. **B2.5 (`calendar.py`) is next** and is the T+14h gate.
 
 ---
 
@@ -807,7 +807,7 @@ Pranav then builds against **MSW mocks** derived from those types. **Result: Pra
 |---|---|---|---|
 | ~~B0~~ | ~~Scaffold, Compose, config, JWT auth, RBAC matrix~~ | ~~4~~ | ✅ **shipped** (`99bfacc`) |
 | ~~B1~~ | ~~Employee (+manager, joining/exit), Department, JobPosition, WorkingSchedule + hours computation~~ | ~~4~~ | ✅ **shipped** — `/employees/{id}/summary` live |
-| B2 | Contract + exclusion constraint + `contract_resolver` (**single contract + warning**) | 2.5 | unit-test with an adjacent pair |
+| ~~B2~~ | ~~Contract + exclusion constraint + `contract_resolver` (**single contract + warning**)~~ | ~~2.5~~ | ✅ **shipped** — 24 resolver unit tests + 52 API assertions |
 | B2.5 | **`calendar.py`** — holidays + `period_days` / `contract_days` | 1.5 | ⭐ every day number comes from here |
 | B3 | Attendance + derived status + `worked_hours` (midnight-safe) + manual-edit fields | 3 | drop `ABSENT` from the enum |
 | B4 | TimeOffType, Allocation, Request, `leave_engine` (schedule-aware duration, block-on-over-balance, cancel) | 4 | |
@@ -1052,10 +1052,11 @@ The brief requires this as a deliverable: *"Brief summary of proposed enhancemen
 
 ## 15. Next Actions
 
-B0 and B1 are shipped. In order:
+B0, B1 and B2 are shipped. In order:
 
 1. ~~**B1** — Employee, Department, JobPosition, WorkingSchedule + computed hours; `/employees/{id}/summary`~~ ✅
-2. **B2 + B2.5** — Contract with the exclusion constraint, `contract_resolver` returning a **single** contract plus a `MULTI_CONTRACT_PERIOD` warning, and `calendar.py` with the holiday table. **Both unit-tested by T+14h** — every number in the product is downstream of these.
-3. Drop `AttendanceStatus.ABSENT` from `app/core/enums.py`; add `AbsencePolicy`
-4. Publish the updated `openapi.json` and ping Pranav with the §5 deltas (balances `pending`, payrun `reopen`/`cancel`, role-filtered dashboard, `?scope=my_team`)
-5. **B5 by hour 10** — sandbox + engine + `time_basis`, with `test_lwp_charged_once` and `test_special_allowance_nonzero` written *first*
+2. ~~**B2** — Contract with the exclusion constraint, `contract_resolver` returning a **single** contract plus a `MULTI_CONTRACT_PERIOD` warning~~ ✅
+3. **B2.5 — `calendar.py`**, the T+14h gate: the public holiday table plus `period_days` / `contract_days`. Every day number in the product is downstream of this, so it lands with its own test file before anything consumes it.
+4. Drop `AttendanceStatus.ABSENT` from `app/core/enums.py`; add `AbsencePolicy`
+5. Publish the updated `openapi.json` and ping Pranav with the §5 deltas (balances `pending`, payrun `reopen`/`cancel`, role-filtered dashboard, `?scope=my_team`, and B2's `/contracts/resolve`)
+6. **B5 by hour 10** — sandbox + engine + `time_basis`, with `test_lwp_charged_once` and `test_special_allowance_nonzero` written *first*

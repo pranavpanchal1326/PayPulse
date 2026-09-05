@@ -18,12 +18,14 @@ from __future__ import annotations
 
 import logging
 from datetime import date, time
+from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.enums import EmployeeType, Role
+from app.core.enums import ContractState, EmployeeType, Role
 from app.core.security import hash_password
+from app.models.contract import Contract
 from app.models.employee import Employee
 from app.models.organization import Department, JobPosition
 from app.models.schedule import WorkingSchedule, WorkingScheduleLine
@@ -125,6 +127,42 @@ REPORTING_LINES: list[tuple[str, str]] = [
 WITHOUT_BANK_DETAILS = {"employee@paypulse.app"}
 
 
+# (user email, wage, start, end, state) - several employees carry history so
+# period-based selection has something to select between.
+#
+# Sneha's pair is the demo beat: a raise on 16 Sep 2026 leaves two adjacent
+# RUNNING contracts. They do not overlap, so the exclusion constraint allows
+# both, and the resolver picks the later one and warns. PRD v1 would have
+# refused to pay her at all.
+SEED_CONTRACTS: list[tuple[str, str, date, date | None, ContractState]] = [
+    ("admin@paypulse.app", "95000.00", date(2021, 4, 1), None, ContractState.RUNNING),
+    (
+        "payroll.manager@paypulse.app", "68000.00",
+        date(2021, 7, 12), date(2024, 3, 31), ContractState.EXPIRED,
+    ),
+    (
+        "payroll.manager@paypulse.app", "82000.00",
+        date(2024, 4, 1), None, ContractState.RUNNING,
+    ),
+    (
+        "payroll.user@paypulse.app", "54000.00",
+        date(2022, 2, 1), None, ContractState.RUNNING,
+    ),
+    (
+        "hr.manager@paypulse.app", "76000.00",
+        date(2020, 9, 15), None, ContractState.RUNNING,
+    ),
+    (
+        "employee@paypulse.app", "40000.00",
+        date(2023, 6, 5), date(2026, 9, 15), ContractState.RUNNING,
+    ),
+    (
+        "employee@paypulse.app", "55000.00",
+        date(2026, 9, 16), None, ContractState.RUNNING,
+    ),
+]
+
+
 def seed_users(db: Session) -> None:
     for email, full_name, role in SEED_USERS:
         user = db.scalar(select(User).where(User.email == email))
@@ -180,6 +218,10 @@ def seed_schedules(db: Session) -> dict[str, WorkingSchedule]:
             row = WorkingSchedule(name=name)
             db.add(row)
         row.lines.clear()
+        # Flush the orphan DELETEs before the new INSERTs. Without this
+        # SQLAlchemy emits the inserts first within the same flush and
+        # uq_schedule_line_day fires on the second run of the seed.
+        db.flush()
         for day, start, end, break_minutes in lines:
             row.lines.append(
                 WorkingScheduleLine(
@@ -247,6 +289,35 @@ def seed_employees(
     return by_email
 
 
+def seed_contracts(db: Session, employees: dict[str, Employee]) -> None:
+    for user_email, wage, start, end, state in SEED_CONTRACTS:
+        employee = employees[user_email]
+        contract = db.scalar(
+            select(Contract).where(
+                Contract.employee_id == employee.id, Contract.date_start == start
+            )
+        )
+        if contract is None:
+            contract = Contract(employee_id=employee.id, date_start=start)
+            db.add(contract)
+        contract.name = f"Contract - {employee.full_name} from {start}"
+        contract.wage = Decimal(wage)
+        contract.currency = "INR"
+        contract.date_end = end
+        contract.state = state
+        contract.department_id = employee.department_id
+        contract.job_position_id = employee.job_position_id
+        contract.working_schedule_id = employee.working_schedule_id
+    db.flush()
+
+    running = sum(1 for c in SEED_CONTRACTS if c[4] is ContractState.RUNNING)
+    logger.info(
+        "  contracts          %d (%d running, incl. a mid-month raise)",
+        len(SEED_CONTRACTS),
+        running,
+    )
+
+
 def main() -> None:
     # Imported lazily so the module-level fixtures can be introspected by
     # tests without constructing an engine (and therefore needing psycopg).
@@ -258,7 +329,8 @@ def main() -> None:
         departments = seed_departments(db)
         positions = seed_positions(db, departments)
         schedules = seed_schedules(db)
-        seed_employees(db, departments, positions, schedules)
+        employees = seed_employees(db, departments, positions, schedules)
+        seed_contracts(db, employees)
         db.commit()
     logger.info("Done. All demo accounts use the password: %s", DEMO_PASSWORD)
 
