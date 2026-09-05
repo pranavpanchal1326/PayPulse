@@ -345,6 +345,17 @@ check(
     refused.get("code") == "LEAVE_EXCEEDS_ALLOCATION",
     "approving 20h against a 12h allocation is refused",
 )
+# Refused in the unit it was filed in, and pinned to the field the form
+# actually renders, so the message lands on the Hours input.
+check(
+    "20.00 hours requested" in refused["message"]
+    and "12.00 hours remaining" in refused["message"],
+    "and says so in hours, not the 2.50/1.50 days underneath",
+)
+check(
+    refused["field_errors"][0]["field"] == "hours",
+    "against the form's own Hours field",
+)
 call("POST", "/time-off/requests/" + str(over["id"]) + "/cancel", hr, {})
 check(
     balance_of(hr, 5, "COMP")["remaining"] == "12.00",

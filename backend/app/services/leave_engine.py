@@ -325,16 +325,34 @@ def assert_within_balance(
     if balance is None:
         return
     if request.duration_days > balance.remaining:
+        # The comparison above stays in days - that is the unit the ledger
+        # and payroll share. Only the wording converts: an HOURS type is
+        # filed in hours and its meter reads hours, so quoting days here
+        # would name a number the employee never typed and cannot see.
+        if type_.unit is LeaveUnit.HOURS:
+            per_day = daily_hours_for(db, request.employee, request.date_from)
+            asked = request.duration_hours or (request.duration_days * per_day)
+            left = (balance.remaining * per_day).quantize(
+                _CENTS, rounding=ROUND_HALF_UP
+            )
+            unit = "hours"
+            # Matches the form's own field name, so the message lands on the
+            # Hours input rather than only in a toast.
+            field = "hours"
+        else:
+            asked = request.duration_days
+            left = balance.remaining
+            unit = "days"
+            field = "duration_days"
         raise BusinessRuleError(
-            f"{request.duration_days} days requested but only "
-            f"{balance.remaining} remaining on {type_.name}. Allocate more "
-            "days, or file this as an unpaid leave type.",
+            f"{asked} {unit} requested but only {left} {unit} remaining on "
+            f"{type_.name}. Allocate more {unit}, or file this as an unpaid "
+            "leave type.",
             code="LEAVE_EXCEEDS_ALLOCATION",
             field_errors=[
                 {
-                    "field": "duration_days",
-                    "message": f"Exceeds remaining balance by "
-                    f"{request.duration_days - balance.remaining}",
+                    "field": field,
+                    "message": f"Exceeds remaining balance by {asked - left}",
                 }
             ],
         )
