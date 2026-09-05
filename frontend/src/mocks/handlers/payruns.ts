@@ -24,7 +24,7 @@ import {
   paginate, query, route, settle, sortBy, str,
 } from "../http";
 import { computeRun, eligibleEmployees } from "../payrollRun";
-import { monthLabel, monthOf } from "../seed/calendar";
+import { monthLabel, monthOf } from "@/lib/date";
 
 /**
  * §4.8, as a table. A transition absent from here is refused, with this map's

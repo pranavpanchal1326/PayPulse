@@ -15,7 +15,7 @@ import type {
 } from "@/api/contract";
 import type { Role } from "@/auth/rbac";
 import { OPEN_PERIOD } from "./anchor";
-import { crossesMidnight, decimal, monthStart, shiftMinutes } from "./calendar";
+import { crossesMidnight, decimal, monthStart, shiftMinutes } from "@/lib/date";
 
 /* ── Departments and positions ───────────────────────────────────────── */
 

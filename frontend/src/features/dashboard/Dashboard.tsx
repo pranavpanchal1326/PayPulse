@@ -40,8 +40,8 @@ import { Bars, Trend } from "@/components/charts";
 import {
   ProvenanceDrawer, RollingCount, RollingNumber, type ProvenanceNode,
 } from "@/components/signature";
-import { OPEN_PERIOD } from "@/mocks/seed/anchor";
-import { addMonths, monthEnd, monthLabel, monthStart } from "@/mocks/seed/calendar";
+import { openPeriod } from "@/lib/clock";
+import { addMonths, monthEnd, monthLabel, monthStart } from "@/lib/date";
 import { LoadFailure, decimalLabel, formatDate, useFilterParams } from "@/features/shared";
 import { getDashboard, listDepartments } from "./api";
 
@@ -55,7 +55,7 @@ export function Dashboard() {
    * screen of zeroes that is arithmetically correct and completely useless.
    * A reports screen opens on the last month that was actually paid.
    */
-  const period = filters.get("period") ?? addMonths(OPEN_PERIOD, -1);
+  const period = filters.get("period") ?? addMonths(openPeriod(), -1);
   const departmentId = filters.num("department_id");
 
   const [tree, setTree] = useState<ProvenanceNode | null>(null);
@@ -75,7 +75,7 @@ export function Dashboard() {
   /** The role's own boundary, read from the payload rather than from the role. */
   const moneyFree = data !== undefined && data.kpis.total_net_paid === null;
 
-  const departmentName = departments.data?.items.find((d) => d.id === departmentId)?.name;
+  const departmentName = departments.data?.find((d) => d.id === departmentId)?.name;
 
   const figures = useMemo(() => (data ? figuresFor(data, period, moneyFree) : []), [
     data, period, moneyFree,
@@ -98,9 +98,9 @@ export function Dashboard() {
           className="pp-filters__field"
           value={period}
           onChange={(e) => filters.set("period", e.target.value)}
-          options={Array.from({ length: 14 }, (_, i) => addMonths(OPEN_PERIOD, 1 - i)).map((m) => ({
+          options={Array.from({ length: 14 }, (_, i) => addMonths(openPeriod(), 1 - i)).map((m) => ({
             value: m,
-            label: monthLabel(m) + (m === OPEN_PERIOD ? " · open" : ""),
+            label: monthLabel(m) + (m === openPeriod() ? " · open" : ""),
           }))}
         />
         <Select
@@ -110,7 +110,7 @@ export function Dashboard() {
           onChange={(e) => filters.set("department_id", e.target.value)}
           options={[
             { value: "", label: "Every department" },
-            ...(departments.data?.items ?? []).map((d) => ({
+            ...(departments.data ?? []).map((d) => ({
               value: String(d.id),
               label: d.name,
             })),

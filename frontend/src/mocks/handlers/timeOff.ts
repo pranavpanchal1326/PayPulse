@@ -27,7 +27,7 @@ import {
   ownScopeId, paginate, query, route, settle, sortBy, str,
 } from "../http";
 import { ANCHOR_TODAY } from "../seed/anchor";
-import { decimal, monthLabel, monthOf } from "../seed/calendar";
+import { decimal, monthLabel, monthOf } from "@/lib/date";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 

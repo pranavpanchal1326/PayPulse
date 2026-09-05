@@ -93,10 +93,10 @@ export function Employees() {
   const canScopeToTeam = user?.employee_id !== null && user?.employee_id !== undefined;
 
   const reference = {
-    departments: departments.data?.items ?? [],
-    positions: positions.data?.items ?? [],
+    departments: departments.data ?? [],
+    positions: positions.data ?? [],
     managers: rows,
-    schedules: schedules.data?.items ?? [],
+    schedules: schedules.data ?? [],
   };
 
   return (

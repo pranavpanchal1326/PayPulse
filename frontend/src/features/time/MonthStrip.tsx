@@ -25,7 +25,7 @@
 import { useMemo } from "react";
 import type { Attendance } from "@/api/contract";
 import { cx } from "@/components/system";
-import { eachDay, monthEnd, monthLabel, monthStart } from "@/mocks/seed/calendar";
+import { eachDay, monthEnd, monthLabel, monthStart } from "@/lib/date";
 
 const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"];
 

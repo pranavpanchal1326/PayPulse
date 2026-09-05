@@ -20,7 +20,7 @@ import {
   Fields, Refused, auth, body, idOf, int, notFound, ok, ownScopeId, paginate, query,
   route, settle, sortBy, str,
 } from "../http";
-import { crossesMidnight, decimal, shiftMinutes } from "../seed/calendar";
+import { crossesMidnight, decimal, shiftMinutes } from "@/lib/date";
 
 /* ── Validation shared by create and update ──────────────────────────── */
 

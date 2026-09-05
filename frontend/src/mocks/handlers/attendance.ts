@@ -25,7 +25,7 @@ import {
   paginate, query, route, settle, str,
 } from "../http";
 import { ANCHOR_TODAY } from "../seed/anchor";
-import { IST_OFFSET, decimal, minutesOf } from "../seed/calendar";
+import { IST_OFFSET, decimal, minutesOf } from "@/lib/date";
 
 /** Later than this after the scheduled start and the row reads `LATE` (§3.4). */
 const LATE_GRACE_MINUTES = 15;

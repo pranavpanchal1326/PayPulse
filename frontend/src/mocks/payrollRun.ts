@@ -20,7 +20,7 @@ import { WARNING_META } from "@/api/contract";
 import { contractsCovering, sourcesFromDb } from "./derive";
 import { db, nextId } from "./db";
 import { computePayslip, countDays, paiseToString } from "./seed/engine";
-import { daysBetween, decimal, monthLabel, monthOf, type ISODate } from "./seed/calendar";
+import { daysBetween, decimal, monthLabel, monthOf, type ISODate } from "@/lib/date";
 
 /* ── Warnings ────────────────────────────────────────────────────────── */
 

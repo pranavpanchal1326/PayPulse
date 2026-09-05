@@ -18,7 +18,7 @@ import type {
   LeaveAllocation, LeaveBalance, RequestState, TimeOffRequest, TimeOffType,
 } from "@/api/contract";
 import { ALL_PERIODS, OPEN_PERIOD } from "./anchor";
-import { addDays, dayOfWeek, decimal, eachDay, monthEnd, monthStart, type ISODate } from "./calendar";
+import { addDays, dayOfWeek, decimal, eachDay, monthEnd, monthStart, type ISODate } from "@/lib/date";
 import { blockingHolidays, employeeById, employees, scheduleWorkingDays } from "./people";
 import { SEEDS, rng } from "./random";
 

@@ -30,8 +30,8 @@ export function Reference() {
   const [editingDept, setEditingDept] = useState<Department | "new">();
   const [editingRole, setEditingRole] = useState<JobPosition | "new">();
 
-  const deptRows = departments.data?.items ?? [];
-  const roleRows = positions.data?.items ?? [];
+  const deptRows = departments.data ?? [];
+  const roleRows = positions.data ?? [];
 
   const deptColumns: Column<Department>[] = useMemo(
     () => [

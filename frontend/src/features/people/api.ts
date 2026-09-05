@@ -47,7 +47,7 @@ export const updateEmployee = (id: number, patch: Partial<Employee>) =>
   api.patch<Employee>(`/employees/${id}`, patch);
 
 export const listDepartments = () =>
-  api.get<Page<Department>>("/departments", { page_size: PEOPLE_PAGE_SIZE });
+  api.get<Department[]>("/departments", { page_size: PEOPLE_PAGE_SIZE });
 
 export const createDepartment = (patch: Partial<Department>) =>
   api.post<Department>("/departments", patch);
@@ -56,7 +56,7 @@ export const updateDepartment = (id: number, patch: Partial<Department>) =>
   api.patch<Department>(`/departments/${id}`, patch);
 
 export const listJobPositions = () =>
-  api.get<Page<JobPosition>>("/job-positions", { page_size: PEOPLE_PAGE_SIZE });
+  api.get<JobPosition[]>("/job-positions", { page_size: PEOPLE_PAGE_SIZE });
 
 export const createJobPosition = (patch: Partial<JobPosition>) =>
   api.post<JobPosition>("/job-positions", patch);
@@ -65,7 +65,7 @@ export const updateJobPosition = (id: number, patch: Partial<JobPosition>) =>
   api.patch<JobPosition>(`/job-positions/${id}`, patch);
 
 export const listSchedules = () =>
-  api.get<Page<WorkingSchedule>>("/working-schedules", { page_size: PEOPLE_PAGE_SIZE });
+  api.get<WorkingSchedule[]>("/working-schedules", { page_size: PEOPLE_PAGE_SIZE });
 
 /* ── THE LINE's sources ───────────────────────────────────────────────────
    Bands come from contracts, ticks from attendance. Both are scoped to one

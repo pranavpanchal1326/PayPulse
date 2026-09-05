@@ -32,8 +32,8 @@ import {
   type Column,
 } from "@/components/system";
 import { RollingCount } from "@/components/signature";
-import { addMonths, monthEnd, monthLabel, monthOf, monthStart } from "@/mocks/seed/calendar";
-import { ANCHOR_TODAY, OPEN_PERIOD } from "@/mocks/seed/anchor";
+import { addMonths, monthEnd, monthLabel, monthOf, monthStart } from "@/lib/date";
+import { currentMonth, openPeriod } from "@/lib/clock";
 import {
   LoadFailure, clockOf, decimalLabel, formatDate, useFilterParams,
 } from "@/features/shared";
@@ -52,7 +52,7 @@ import { NewAttendance } from "./NewAttendance";
  * month would show an empty register on first load — correct arithmetic, and
  * indistinguishable from a broken screen.
  */
-const DEFAULT_MONTH = OPEN_PERIOD;
+const DEFAULT_MONTH = openPeriod();
 
 export function Attendance() {
   const { user, can } = useAuth();
@@ -101,7 +101,7 @@ export function Attendance() {
   const dailyHoursFor = (row: Row | undefined): number => {
     if (!row) return 8;
     const person = employees.data?.items.find((e) => e.id === row.employee_id);
-    const schedule: WorkingSchedule | undefined = schedules.data?.items.find(
+    const schedule: WorkingSchedule | undefined = schedules.data?.find(
       (s) => s.id === person?.working_schedule_id,
     );
     return schedule ? Number(schedule.daily_hours) : 8;
@@ -319,7 +319,7 @@ export function Attendance() {
           className="pp-filters__field"
           value={month}
           onChange={(e) => filters.set("month", e.target.value)}
-          options={monthOptions(monthOf(ANCHOR_TODAY))}
+          options={monthOptions(currentMonth())}
         />
         {!isEmployee && (
           <Select

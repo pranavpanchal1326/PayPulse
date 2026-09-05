@@ -12,7 +12,7 @@ export const PAGE_SIZE = 200;
 /* ── Types ────────────────────────────────────────────────────────────── */
 
 export const listTypes = (activeOnly?: boolean) =>
-  api.get<Page<TimeOffType>>("/time-off/types", {
+  api.get<TimeOffType[]>("/time-off/types", {
     is_active: activeOnly === undefined ? undefined : String(activeOnly),
     page_size: PAGE_SIZE,
   });

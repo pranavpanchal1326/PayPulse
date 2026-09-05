@@ -24,7 +24,7 @@ import {
   useToast, type Column,
 } from "@/components/system";
 import { Segment } from "@/components/signature";
-import { ANCHOR_TODAY } from "@/mocks/seed/anchor";
+import { today, yearEnd, yearStart } from "@/lib/clock";
 import {
   LoadFailure, SectionNav, decimalLabel, formatDate, useFilterParams,
 } from "@/features/shared";
@@ -34,8 +34,8 @@ import {
 } from "./api";
 import { SECTION_NAV } from "./nav";
 
-const YEAR_START = `${ANCHOR_TODAY.slice(0, 4)}-01-01`;
-const YEAR_END = `${ANCHOR_TODAY.slice(0, 4)}-12-31`;
+const YEAR_START = yearStart();
+const YEAR_END = yearEnd();
 
 export function Allocations() {
   const { can } = useAuth();
@@ -113,7 +113,7 @@ export function Allocations() {
               to={YEAR_END}
               start={a.validity_from}
               end={a.validity_to}
-              active={a.state === "APPROVED" && a.validity_to >= ANCHOR_TODAY}
+              active={a.state === "APPROVED" && a.validity_to >= today()}
               label={`Valid ${formatDate(a.validity_from)} to ${formatDate(a.validity_to)}`}
             />
           );
@@ -229,7 +229,7 @@ export function Allocations() {
           onChange={(e) => filters.set("time_off_type_id", e.target.value)}
           options={[
             { value: "", label: "Any type" },
-            ...(types.data?.items ?? []).map((t) => ({ value: String(t.id), label: t.name })),
+            ...(types.data ?? []).map((t) => ({ value: String(t.id), label: t.name })),
           ]}
         />
         <Select
@@ -275,7 +275,7 @@ export function Allocations() {
       <AllocationForm
         open={adding}
         employees={employees.data?.items ?? []}
-        types={(types.data?.items ?? []).filter((t) => t.is_active && t.requires_allocation)}
+        types={(types.data ?? []).filter((t) => t.is_active && t.requires_allocation)}
         onClose={() => setAdding(false)}
         onSaved={() => {
           setAdding(false);

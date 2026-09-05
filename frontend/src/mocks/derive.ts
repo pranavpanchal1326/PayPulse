@@ -18,7 +18,7 @@ import type {
   Attendance, Contract, LeaveBalance, RequestState, TimeOffType,
 } from "@/api/contract";
 import { db } from "./db";
-import { dayOfWeek, decimal, eachDay, type ISODate } from "./seed/calendar";
+import { dayOfWeek, decimal, eachDay, type ISODate } from "@/lib/date";
 import type { PayrollSources } from "./seed/engine";
 
 /* ── Calendars ───────────────────────────────────────────────────────── */

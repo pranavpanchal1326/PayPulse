@@ -19,7 +19,7 @@ export const PAGE_SIZE = 200;
 /* ── Salary structures and rules · P9 ─────────────────────────────────── */
 
 export const listStructures = () =>
-  api.get<Page<SalaryStructure>>("/salary-structures", { page_size: PAGE_SIZE });
+  api.get<SalaryStructure[]>("/salary-structures", { page_size: PAGE_SIZE });
 
 export const getStructure = (id: number) =>
   api.get<SalaryStructureDetail>(`/salary-structures/${id}`);
@@ -79,7 +79,7 @@ export const getPayrun = (id: number) => api.get<PayrunDetail>(`/payruns/${id}`)
 export const createPayrun = (body: PayrunCreate) => api.post<PayrunDetail>("/payruns", body);
 
 export const listWarnings = (id: number, severity?: string) =>
-  api.get<Page<PayrollWarning>>(`/payruns/${id}/warnings`, { severity, page_size: PAGE_SIZE });
+  api.get<PayrollWarning[]>(`/payruns/${id}/warnings`, { severity, page_size: PAGE_SIZE });
 
 /** Idempotent by construction — pressing Compute twice is not a 422. */
 export const computePayrun = (id: number) => api.post<PayrunDetail>(`/payruns/${id}/compute`);
@@ -131,4 +131,4 @@ export const listEmployees = () =>
   api.get<Page<Employee>>("/employees", { page_size: PAGE_SIZE });
 
 export const listDepartments = () =>
-  api.get<Page<Department>>("/departments", { page_size: PAGE_SIZE });
+  api.get<Department[]>("/departments", { page_size: PAGE_SIZE });

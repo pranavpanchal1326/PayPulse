@@ -45,7 +45,7 @@ export function Types() {
   const types = useQuery(() => listTypes(), []);
   const [editing, setEditing] = useState<TimeOffType | "new">();
 
-  const rows = types.data?.items ?? [];
+  const rows = types.data ?? [];
 
   return (
     <>

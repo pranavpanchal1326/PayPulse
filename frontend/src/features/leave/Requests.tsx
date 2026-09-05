@@ -350,7 +350,7 @@ export function Requests() {
           onChange={(e) => filters.set("time_off_type_id", e.target.value)}
           options={[
             { value: "", label: "Any type" },
-            ...(types.data?.items ?? []).map((t) => ({ value: String(t.id), label: t.name })),
+            ...(types.data ?? []).map((t) => ({ value: String(t.id), label: t.name })),
           ]}
         />
         <Select
@@ -423,7 +423,7 @@ export function Requests() {
       <RequestForm
         open={filing}
         employees={employees.data?.items ?? []}
-        types={(types.data?.items ?? []).filter((t) => t.is_active)}
+        types={(types.data ?? []).filter((t) => t.is_active)}
         onClose={() => setFiling(false)}
         onSaved={(created) => {
           setFiling(false);

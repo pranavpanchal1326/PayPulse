@@ -15,8 +15,8 @@ import type { Employee } from "@/api/contract";
 import { ApiError } from "@/api/errors";
 import { useSubmission } from "@/api/useQuery";
 import { Button, Drawer, Field, Select, WarningCard, useToast } from "@/components/system";
-import { ANCHOR_TODAY } from "@/mocks/seed/anchor";
-import { IST_OFFSET } from "@/mocks/seed/calendar";
+import { today } from "@/lib/clock";
+import { IST_OFFSET } from "@/lib/date";
 import { createAttendance } from "./api";
 
 export function NewAttendance({
@@ -33,7 +33,7 @@ export function NewAttendance({
   const toast = useToast();
   const form = useSubmission();
   const [employeeId, setEmployeeId] = useState("");
-  const [date, setDate] = useState(ANCHOR_TODAY);
+  const [date, setDate] = useState(today());
   const [start, setStart] = useState("09:00");
   const [end, setEnd] = useState("18:00");
   const [breakMinutes, setBreakMinutes] = useState(60);

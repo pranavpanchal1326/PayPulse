@@ -12,10 +12,11 @@
  * password, so switching changes what the data *is*, never how the app
  * behaves. The mock's auth handlers exist for exactly this reason.
  *
- * The default is `mock` in dev because the backend is at B0 — only `/auth`
- * exists, and every screen from P5 onward would be an empty state. It is
- * `live` in a production build, so a deployed bundle can never quietly serve
- * fixtures. Both are overridden by setting the variable.
+ * The default is now `live` everywhere. It was `mock` in dev while the backend
+ * was at B0 and only `/auth` existed; the backend is complete, so defaulting to
+ * fixtures would mean the app you develop against and the app you ship are
+ * different, and every integration bug would surface for the first time on
+ * stage. Set `VITE_API_MODE=mock` to work on the UI with no stack running.
  */
 
 export type ApiMode = "mock" | "live";
@@ -23,11 +24,7 @@ export type ApiMode = "mock" | "live";
 const configured = import.meta.env.VITE_API_MODE as string | undefined;
 
 export const API_MODE: ApiMode =
-  configured === "mock" || configured === "live"
-    ? configured
-    : import.meta.env.DEV
-      ? "mock"
-      : "live";
+  configured === "mock" || configured === "live" ? configured : "live";
 
 export const usingMocks = API_MODE === "mock";
 

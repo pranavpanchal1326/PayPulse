@@ -37,8 +37,8 @@ import {
   Button, EmptyState, Field, Select, Skeleton, WarningCard, Well, cx, useToast,
 } from "@/components/system";
 import { Ratio, RollingCount, RollingNumber } from "@/components/signature";
-import { ANCHOR_TODAY, OPEN_PERIOD } from "@/mocks/seed/anchor";
-import { addMonths, monthEnd, monthLabel, monthStart } from "@/mocks/seed/calendar";
+import { currentMonth, openPeriod } from "@/lib/clock";
+import { addMonths, monthEnd, monthLabel, monthStart } from "@/lib/date";
 import { LoadFailure, formatDate } from "@/features/shared";
 import { createPayrun, listDepartments, listStructures, previewEligible } from "./api";
 import { DarkRoom } from "./DarkRoom";
@@ -65,8 +65,8 @@ export function Wizard() {
 
   /** The fixtures are anchored, so the open period is the sensible default. */
   const [structureId, setStructureId] = useState("");
-  const [periodStart, setPeriodStart] = useState(monthStart(OPEN_PERIOD));
-  const [periodEnd, setPeriodEnd] = useState(monthEnd(OPEN_PERIOD));
+  const [periodStart, setPeriodStart] = useState(monthStart(openPeriod()));
+  const [periodEnd, setPeriodEnd] = useState(monthEnd(openPeriod()));
   const [departmentId, setDepartmentId] = useState("");
   const [employeeType, setEmployeeType] = useState("");
   const [name, setName] = useState("");
@@ -77,7 +77,7 @@ export function Wizard() {
 
   /** One structure is the common case; choosing it for the user is not a decision. */
   useEffect(() => {
-    const items = structures.data?.items ?? [];
+    const items = structures.data ?? [];
     if (structureId === "" && items.length > 0) setStructureId(String(items[0].id));
   }, [structures.data, structureId]);
 
@@ -171,7 +171,7 @@ export function Wizard() {
               onChange={(e) => setStructureId(e.target.value)}
               options={[
                 { value: "", label: "Choose a structure" },
-                ...(structures.data?.items ?? []).map((s) => ({
+                ...(structures.data ?? []).map((s) => ({
                   value: String(s.id),
                   label: `${s.name} · ${s.rule_count} rules`,
                 })),
@@ -199,7 +199,7 @@ export function Wizard() {
               onChange={(e) => setDepartmentId(e.target.value)}
               options={[
                 { value: "", label: "Every department" },
-                ...(departments.data?.items ?? []).map((d) => ({
+                ...(departments.data ?? []).map((d) => ({
                   value: String(d.id),
                   label: d.name,
                 })),
@@ -221,7 +221,7 @@ export function Wizard() {
               <span className="t-micro">QUICK PERIODS</span>
               <div className="pp-form__row">
                 {[0, -1, -2].map((offset) => {
-                  const month = addMonths(ANCHOR_TODAY.slice(0, 7), offset - 1);
+                  const month = addMonths(currentMonth(), offset - 1);
                   const active = periodStart === monthStart(month) && periodEnd === monthEnd(month);
                   return (
                     <Button

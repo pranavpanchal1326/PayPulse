@@ -213,7 +213,7 @@ export function Rules({ structureId }: { structureId: number }) {
       <SectionNav
         items={[
           ...SECTION_NAV,
-          ...(structures.data?.items.length && structures.data.items.length > 1
+          ...(structures.data?.length && structures.data.length > 1
             ? []
             : []),
         ]}

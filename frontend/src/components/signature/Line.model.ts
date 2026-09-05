@@ -13,7 +13,7 @@
  * "nothing happened", the picture stops agreeing with the database.
  */
 import type { Attendance, Contract, PublicHoliday } from "@/api/contract";
-import { monthEnd, monthLabel, monthOf, type ISODate } from "@/mocks/seed/calendar";
+import { monthEnd, monthLabel, monthOf, type ISODate } from "@/lib/date";
 import type { LineBand, LineBoundary, LineModel, LineTick } from "./Line";
 
 export interface LineSources {

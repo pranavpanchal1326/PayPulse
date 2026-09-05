@@ -257,10 +257,10 @@ export function EmployeePage({ id, self }: { id: number; self?: boolean }) {
           onClose={() => setEditing(false)}
           employee={person}
           reference={{
-            departments: departments.data?.items ?? [],
-            positions: positions.data?.items ?? [],
+            departments: departments.data ?? [],
+            positions: positions.data ?? [],
             managers: managers.data?.items ?? [],
-            schedules: schedules.data?.items ?? [],
+            schedules: schedules.data ?? [],
           }}
           onSaved={() => {
             employee.reload();

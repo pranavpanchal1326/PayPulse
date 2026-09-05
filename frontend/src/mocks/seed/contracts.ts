@@ -15,7 +15,7 @@
  */
 import type { Contract } from "@/api/contract";
 import { ALL_PERIODS, CURRENCY, OPEN_PERIOD } from "./anchor";
-import { addDays, monthStart, type ISODate } from "./calendar";
+import { addDays, monthStart, type ISODate } from "@/lib/date";
 import { CAST, WAGE_BY_EMPLOYEE, employees } from "./people";
 import { SEEDS, rng } from "./random";
 

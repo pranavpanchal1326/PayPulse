@@ -22,7 +22,7 @@ import { balancesFor } from "../derive";
 import { byId, db } from "../db";
 import { Refused, auth, ok, query, route, settle } from "../http";
 import { OPEN_PERIOD } from "../seed/anchor";
-import { addMonths, decimal, monthEnd, monthOf, monthStart } from "../seed/calendar";
+import { addMonths, decimal, monthEnd, monthOf, monthStart } from "@/lib/date";
 import { paiseToString, toPaise } from "../seed/engine";
 
 /** Counted towards money KPIs — a DRAFT payslip is a proposal, not a payment. */

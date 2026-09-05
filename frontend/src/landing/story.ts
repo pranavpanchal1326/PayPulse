@@ -28,7 +28,7 @@ import { money, type Money } from "@/api/money";
 import { buildLineModel, buildPayslipProvenance } from "@/components/signature";
 import type { LineModel, ProvenanceNode, StackBlock } from "@/components/signature";
 import { CURRENCY, OPEN_PERIOD } from "@/mocks/seed/anchor";
-import { monthEnd, monthLabel, monthStart, type ISODate } from "@/mocks/seed/calendar";
+import { monthEnd, monthLabel, monthStart, type ISODate } from "@/lib/date";
 import { attendances } from "@/mocks/seed/attendance";
 import { contractsCovering } from "@/mocks/seed/contracts";
 import { computePayslip, paiseToString } from "@/mocks/seed/engine";

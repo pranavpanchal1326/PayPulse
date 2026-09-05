@@ -14,6 +14,7 @@ from app.core.deps import AccessContext, DbSession, require
 from app.core.enums import PayrunState, PayslipState, WarningSeverity
 from app.core.errors import ConflictError, NotFoundError
 from app.core.rbac import Action, Resource
+from app.models.employee import Employee
 from app.models.payroll import PayrollWarning, Payrun, Payslip
 from app.models.salary import SalaryStructure
 from app.schemas.common import Message, Page
@@ -46,13 +47,31 @@ slip_update = Annotated[
 ]
 
 
-def _warning_out(warning: PayrollWarning) -> WarningOut:
+def _warning_names(db: Session, warnings_: list) -> dict[int, str]:
+    """employee_id -> full name, for the warnings in one list. One query."""
+    ids = {w.employee_id for w in warnings_ if w.employee_id}
+    if not ids:
+        return {}
+    return {
+        eid: f"{first} {last}"
+        for eid, first, last in db.execute(
+            select(Employee.id, Employee.first_name, Employee.last_name)
+            .where(Employee.id.in_(ids))
+        ).all()
+    }
+
+
+def _warning_out(
+    warning: PayrollWarning, employee_name: str | None = None
+) -> WarningOut:
     return WarningOut(
         id=warning.id,
+        payrun_id=warning.payrun_id,
         code=warning.code,
         severity=warning.severity,
         message=warning.message,
         employee_id=warning.employee_id,
+        employee_name=employee_name,
         payslip_id=warning.payslip_id,
         blocks=warnings.blocks(warning.code),
     )
@@ -105,13 +124,13 @@ def _payrun_out(db: Session, payrun: Payrun) -> PayrunOut:
 
 
 def _payrun_detail(db: Session, payrun: Payrun) -> PayrunDetailOut:
-    warning_counts = dict(
-        db.execute(
-            select(PayrollWarning.payslip_id, func.count(PayrollWarning.id))
-            .where(PayrollWarning.payrun_id == payrun.id)
-            .group_by(PayrollWarning.payslip_id)
-        ).all()
-    )
+    warning_codes: dict[int, list] = {}
+    for payslip_id, code in db.execute(
+        select(PayrollWarning.payslip_id, PayrollWarning.code)
+        .where(PayrollWarning.payrun_id == payrun.id)
+        .order_by(PayrollWarning.severity, PayrollWarning.id)
+    ).all():
+        warning_codes.setdefault(payslip_id, []).append(code)
     payslips = list(
         db.scalars(
             select(Payslip)
@@ -120,6 +139,18 @@ def _payrun_detail(db: Session, payrun: Payrun) -> PayrunDetailOut:
             .order_by(Payslip.id)
         )
     )
+    rows = list(
+        db.scalars(
+            select(PayrollWarning)
+            .where(PayrollWarning.payrun_id == payrun.id)
+            .order_by(PayrollWarning.severity, PayrollWarning.id)
+        )
+    )
+    names = _warning_names(db, rows)
+    counts: dict[str, int] = {s.value: 0 for s in WarningSeverity}
+    for row in rows:
+        counts[row.severity.value] += 1
+
     base = _payrun_out(db, payrun)
     return PayrunDetailOut(
         **base.model_dump(),
@@ -133,18 +164,13 @@ def _payrun_detail(db: Session, payrun: Payrun) -> PayrunDetailOut:
                 net=p.net,
                 payable_days=p.payable_days,
                 state=p.state,
-                warning_count=warning_counts.get(p.id, 0),
+                warning_count=len(warning_codes.get(p.id, [])),
+                warning_codes=warning_codes.get(p.id, []),
             )
             for p in payslips
         ],
-        warnings=[
-            _warning_out(w)
-            for w in db.scalars(
-                select(PayrollWarning)
-                .where(PayrollWarning.payrun_id == payrun.id)
-                .order_by(PayrollWarning.severity, PayrollWarning.id)
-            )
-        ],
+        warnings=[_warning_out(w, names.get(w.employee_id)) for w in rows],
+        warning_counts=counts,
     )
 
 
@@ -180,7 +206,7 @@ def _payslip_out(db: Session, payslip: Payslip) -> PayslipOut:
         state=payslip.state,
         lines=[PayslipLineOut.model_validate(line) for line in payslip.lines],
         warnings=[
-            _warning_out(w)
+            _warning_out(w, payslip.employee.full_name if payslip.employee else None)
             for w in db.scalars(
                 select(PayrollWarning).where(
                     PayrollWarning.payslip_id == payslip.id
@@ -288,7 +314,7 @@ def list_payruns(
     period_start: Annotated[date | None, Query()] = None,
     period_end: Annotated[date | None, Query()] = None,
     page: Annotated[int, Query(ge=1)] = 1,
-    page_size: Annotated[int, Query(ge=1, le=100)] = 25,
+    page_size: Annotated[int, Query(ge=1, le=200)] = 25,
 ) -> Page[PayrunOut]:
     stmt = select(Payrun)
     if state is not None:
@@ -322,14 +348,15 @@ def payrun_warnings(
     payrun_id: int, db: DbSession, _: run_read
 ) -> list[WarningOut]:
     _get_payrun(db, payrun_id)
-    return [
-        _warning_out(w)
-        for w in db.scalars(
+    rows = list(
+        db.scalars(
             select(PayrollWarning)
             .where(PayrollWarning.payrun_id == payrun_id)
             .order_by(PayrollWarning.severity, PayrollWarning.id)
         )
-    ]
+    )
+    names = _warning_names(db, rows)
+    return [_warning_out(w, names.get(w.employee_id)) for w in rows]
 
 
 # --- state transitions (spec B6) ----------------------------------------
@@ -437,7 +464,7 @@ def list_payslips(
     employee_id: Annotated[int | None, Query()] = None,
     state: Annotated[PayslipState | None, Query()] = None,
     page: Annotated[int, Query(ge=1)] = 1,
-    page_size: Annotated[int, Query(ge=1, le=100)] = 25,
+    page_size: Annotated[int, Query(ge=1, le=200)] = 25,
 ) -> Page[PayslipOut]:
     stmt = select(Payslip)
     if payrun_id is not None:

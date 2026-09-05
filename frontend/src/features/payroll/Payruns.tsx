@@ -23,7 +23,7 @@ import {
   Button, Card, EmptyState, Select, StateChip, Table, Well, type Column,
 } from "@/components/system";
 import { RollingCount, RollingNumber } from "@/components/signature";
-import { monthLabel, monthOf } from "@/mocks/seed/calendar";
+import { monthLabel, monthOf } from "@/lib/date";
 import { LoadFailure, SectionNav, formatDate, useFilterParams } from "@/features/shared";
 import { listPayruns } from "./api";
 import { SECTION_NAV } from "./nav";

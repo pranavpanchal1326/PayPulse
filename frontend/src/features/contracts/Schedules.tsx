@@ -30,7 +30,7 @@ export function Schedules() {
   const navigate = useNavigate();
   const { can } = useAuth();
   const schedules = useQuery(() => listSchedules(), []);
-  const rows = schedules.data?.items ?? [];
+  const rows = schedules.data ?? [];
 
   return (
     <>

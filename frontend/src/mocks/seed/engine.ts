@@ -22,7 +22,7 @@ import type {
   Attendance, Contract, Employee, PayslipLine, RuleCategory, SalaryRule, WarningCode,
 } from "@/api/contract";
 import { attendanceIndex } from "./attendance";
-import { dayOfWeek, eachDay, type ISODate } from "./calendar";
+import { dayOfWeek, eachDay, type ISODate } from "@/lib/date";
 import { blockingHolidays, scheduleById, scheduleWorkingDays } from "./people";
 import { salaryRules } from "./payroll";
 import { approvedLeaveByEmployee } from "./timeOff";

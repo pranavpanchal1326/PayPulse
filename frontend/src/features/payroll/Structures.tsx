@@ -34,7 +34,7 @@ export function Structures() {
   const structures = useQuery(() => listStructures(), []);
   const [adding, setAdding] = useState(false);
 
-  const rows = structures.data?.items ?? [];
+  const rows = structures.data ?? [];
 
   return (
     <>

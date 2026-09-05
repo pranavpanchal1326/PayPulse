@@ -37,7 +37,7 @@ import {
 } from "@/components/system";
 import { RollingNumber } from "@/components/signature";
 import { money } from "@/api/money";
-import { crossesMidnight, shiftMinutes } from "@/mocks/seed/calendar";
+import { crossesMidnight, shiftMinutes } from "@/lib/date";
 import { LoadFailure, decimalLabel, hhmm } from "@/features/shared";
 import { createSchedule, listSchedules, updateSchedule, type ScheduleLineDraft } from "./api";
 import { DAY_NAMES } from "./Schedules";
@@ -126,7 +126,7 @@ export function ScheduleEditor({ id }: { id: number | "new" }) {
    */
   const schedules = useQuery(() => listSchedules(), []);
   const existing =
-    id === "new" ? undefined : schedules.data?.items.find((s) => s.id === id);
+    id === "new" ? undefined : schedules.data?.find((s) => s.id === id);
 
   const [name, setName] = useState("");
   const [week, setWeek] = useState<DayDraft[]>(DEFAULT_WEEK);

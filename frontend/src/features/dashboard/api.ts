@@ -7,9 +7,9 @@
  * payslip count is how a dashboard stops being believed.
  */
 import { api } from "@/api/client";
-import type { Dashboard, DashboardQuery, Department, Page } from "@/api/contract";
+import type { Dashboard, DashboardQuery, Department } from "@/api/contract";
 
 export const getDashboard = (q: DashboardQuery) => api.get<Dashboard>("/dashboard", { ...q });
 
 export const listDepartments = () =>
-  api.get<Page<Department>>("/departments", { page_size: 200 });
+  api.get<Department[]>("/departments", { page_size: 200 });

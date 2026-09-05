@@ -10,7 +10,7 @@
  * every run is byte-identical — a payslip screenshotted in P11 has to still be
  * that payslip in P15. Re-basing the whole dataset is a one-line edit here.
  */
-import { addMonths, monthEnd, monthStart, type ISODate, type ISOMonth } from "./calendar";
+import { addMonths, monthEnd, monthStart, type ISODate, type ISOMonth } from "@/lib/date";
 
 /** Change this and every date in the fixtures moves with it. */
 export const ANCHOR_TODAY: ISODate = "2026-09-05";

@@ -21,8 +21,6 @@ export const listContracts = (q: ContractQuery) =>
  * "which contracts do they have", and the one the contract list's active
  * marker is actually about.
  */
-export const listActiveContracts = (on: string) =>
-  api.get<Page<Contract>>("/contracts/active", { active_on: on, page_size: PAGE_SIZE });
 
 export const createContract = (patch: Partial<Contract>) =>
   api.post<Contract>("/contracts", patch);
@@ -36,13 +34,13 @@ export const listEmployees = () =>
   api.get<Page<Employee>>("/employees", { page_size: PAGE_SIZE });
 
 export const listSchedules = () =>
-  api.get<Page<WorkingSchedule>>("/working-schedules", { page_size: PAGE_SIZE });
+  api.get<WorkingSchedule[]>("/working-schedules", { page_size: PAGE_SIZE });
 
 export const listStructures = () =>
-  api.get<Page<SalaryStructure>>("/salary-structures", { page_size: PAGE_SIZE });
+  api.get<SalaryStructure[]>("/salary-structures", { page_size: PAGE_SIZE });
 
 export const listJobPositions = () =>
-  api.get<Page<JobPosition>>("/job-positions", { page_size: PAGE_SIZE });
+  api.get<JobPosition[]>("/job-positions", { page_size: PAGE_SIZE });
 
 /* ── S5 · the schedule editor ─────────────────────────────────────────── */
 

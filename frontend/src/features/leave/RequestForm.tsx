@@ -19,7 +19,7 @@ import { ApiError } from "@/api/errors";
 import { useQuery, useSubmission } from "@/api/useQuery";
 import { useAuth } from "@/auth/AuthContext";
 import { Button, Drawer, Field, Select, Textarea, WarningCard, Well } from "@/components/system";
-import { ANCHOR_TODAY } from "@/mocks/seed/anchor";
+import { today } from "@/lib/clock";
 import { decimalLabel } from "@/features/shared";
 import { createRequest, getBalances } from "./api";
 import { BalanceMeter } from "./BalanceMeter";
@@ -42,8 +42,8 @@ export function RequestForm({
 
   const [employeeId, setEmployeeId] = useState("");
   const [typeId, setTypeId] = useState("");
-  const [from, setFrom] = useState(ANCHOR_TODAY);
-  const [to, setTo] = useState(ANCHOR_TODAY);
+  const [from, setFrom] = useState(today());
+  const [to, setTo] = useState(today());
   const [hours, setHours] = useState("8");
   const [reason, setReason] = useState("");
   const [refusal, setRefusal] = useState<string>();

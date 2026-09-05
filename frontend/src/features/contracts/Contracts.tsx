@@ -124,8 +124,8 @@ export function Contracts() {
 
   const reference = {
     employees: employees.data?.items ?? [],
-    schedules: schedules.data?.items ?? [],
-    structures: structures.data?.items ?? [],
+    schedules: schedules.data ?? [],
+    structures: structures.data ?? [],
   };
 
   const filtered = employeeId !== undefined || state !== undefined || search.trim() !== "";

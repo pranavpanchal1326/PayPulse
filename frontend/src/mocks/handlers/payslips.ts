@@ -18,7 +18,7 @@ import {
   route, settle, sortBy,
 } from "../http";
 import { recomputePayslip } from "../payrollRun";
-import { monthLabel, monthOf } from "../seed/calendar";
+import { monthLabel, monthOf } from "@/lib/date";
 
 const linesOf = (payslipId: number) =>
   sortBy(db.payslipLines.filter((l) => l.payslip_id === payslipId), (l) => l.sequence);

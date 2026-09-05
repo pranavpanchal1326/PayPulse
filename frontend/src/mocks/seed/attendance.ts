@@ -17,7 +17,7 @@ import type { Attendance, AttendanceStatus } from "@/api/contract";
 import { ATTENDANCE_FROM, ATTENDANCE_TO } from "./anchor";
 import {
   at, dayOfWeek, decimal, eachDay, minutesOf, shiftMinutes, timeOf, type ISODate,
-} from "./calendar";
+} from "@/lib/date";
 import { blockingHolidays, employees, scheduleById, scheduleWorkingDays } from "./people";
 import { approvedLeaveDays } from "./timeOff";
 import { SEEDS, rng } from "./random";

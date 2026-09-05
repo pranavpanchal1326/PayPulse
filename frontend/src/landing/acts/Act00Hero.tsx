@@ -37,7 +37,7 @@ import {
   useTransform,
   type MotionValue,
 } from "motion/react";
-import { addDays, daysBetween, type ISODate } from "@/mocks/seed/calendar";
+import { addDays, daysBetween, type ISODate } from "@/lib/date";
 import { formatMoney } from "@/api/money";
 import { Line, RollingNumber } from "@/components/signature";
 import { Button } from "@/components/system";

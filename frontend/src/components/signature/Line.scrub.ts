@@ -25,7 +25,7 @@
  *     a week, Page keys a month, Home and End the ends.
  */
 import { useCallback, useRef } from "react";
-import { addDays, daysBetween, type ISODate } from "@/mocks/seed/calendar";
+import { addDays, daysBetween, type ISODate } from "@/lib/date";
 
 export interface ScrubOptions {
   /** Inclusive window the bead may travel over. */

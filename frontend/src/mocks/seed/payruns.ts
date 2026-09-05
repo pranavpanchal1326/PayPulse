@@ -21,7 +21,7 @@ import type {
   Payrun, PayrollWarning, Payslip, PayslipLine, PayrunState, WarningCode,
 } from "@/api/contract";
 import { ALL_PERIODS, CLOSED_PERIODS, CURRENCY, OPEN_PERIOD } from "./anchor";
-import { addDays, daysBetween, decimal, monthEnd, monthLabel, monthStart } from "./calendar";
+import { addDays, daysBetween, decimal, monthEnd, monthLabel, monthStart } from "@/lib/date";
 import { STRUCTURE_ID, contractsCovering } from "./contracts";
 import { computePayslip, paiseToString } from "./engine";
 import { WARNING_META } from "@/api/contract";

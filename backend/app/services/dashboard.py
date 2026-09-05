@@ -33,10 +33,22 @@ from app.models.contract import Contract
 from app.models.employee import Employee
 from app.models.organization import Department
 from app.models.payroll import PayrollWarning, Payrun, Payslip
-from app.models.timeoff import TimeOffRequest, TimeOffType
+from app.models.timeoff import LeaveAllocation, TimeOffRequest, TimeOffType
+from app.services import leave_engine
 
 # Only these states represent money that will actually be paid.
 COUNTED_PAYSLIP_STATES = (PayslipState.VALIDATED, PayslipState.PAID)
+
+# What counts against a balance here must be exactly what counts against it
+# on the leave screen, or the same employee shows two different remainders in
+# two places and neither number gets trusted. leave_engine.CONSUMING_STATES is
+# the definition; this mirrors it deliberately rather than re-deciding.
+CONSUMING_LEAVE_STATES = leave_engine.CONSUMING_STATES
+
+# "Running low" for the dashboard panel. Days, not a percentage: half a
+# day left of a 2-day allocation is not the same problem as half a day
+# left of 30.
+LOW_BALANCE_DAYS = 3
 
 
 def _scoped_employees(
@@ -197,16 +209,80 @@ def build(
         or 0
     )
     leave_by_type = [
-        {"type": name, "days": str(days)}
-        for name, days in db.execute(
+        {"time_off_type_id": type_id, "name": name, "days": str(days)}
+        for type_id, name, days in db.execute(
             select(
+                TimeOffType.id,
                 TimeOffType.name,
                 func.coalesce(func.sum(TimeOffRequest.duration_days), 0),
             )
             .join(TimeOffRequest, TimeOffRequest.time_off_type_id == TimeOffType.id)
             .where(*leave_filter, TimeOffRequest.state == RequestState.APPROVED)
-            .group_by(TimeOffType.name)
+            .group_by(TimeOffType.id, TimeOffType.name)
             .order_by(func.sum(TimeOffRequest.duration_days).desc())
+        ).all()
+    ]
+
+    # --- who is running out of leave (PRD section 5: low_balances) ---
+    #
+    # allocated - consumed, per employee and type, in one query rather than
+    # calling leave_engine.balances() per employee: that is three queries each
+    # and this runs for the whole company on every dashboard load.
+    allocated = (
+        select(
+            LeaveAllocation.employee_id.label("employee_id"),
+            LeaveAllocation.time_off_type_id.label("type_id"),
+            func.sum(LeaveAllocation.days).label("days"),
+        )
+        .where(
+            LeaveAllocation.state == RequestState.APPROVED,
+            LeaveAllocation.employee_id.in_(employee_scope),
+            LeaveAllocation.validity_from <= period_end,
+            (LeaveAllocation.validity_to.is_(None))
+            | (LeaveAllocation.validity_to >= period_end),
+        )
+        .group_by(LeaveAllocation.employee_id, LeaveAllocation.time_off_type_id)
+        .subquery()
+    )
+    consumed = (
+        select(
+            TimeOffRequest.employee_id.label("employee_id"),
+            TimeOffRequest.time_off_type_id.label("type_id"),
+            func.sum(TimeOffRequest.duration_days).label("days"),
+        )
+        .where(TimeOffRequest.state.in_(CONSUMING_LEAVE_STATES))
+        .group_by(TimeOffRequest.employee_id, TimeOffRequest.time_off_type_id)
+        .subquery()
+    )
+    remaining = allocated.c.days - func.coalesce(consumed.c.days, 0)
+    low_balances = [
+        {
+            "employee_id": employee_id,
+            "employee_name": f"{first} {last}",
+            "time_off_type_name": type_name,
+            "remaining": str(left),
+        }
+        for employee_id, first, last, type_name, left in db.execute(
+            select(
+                allocated.c.employee_id,
+                Employee.first_name,
+                Employee.last_name,
+                TimeOffType.name,
+                remaining,
+            )
+            .join(Employee, Employee.id == allocated.c.employee_id)
+            .join(TimeOffType, TimeOffType.id == allocated.c.type_id)
+            .outerjoin(
+                consumed,
+                (consumed.c.employee_id == allocated.c.employee_id)
+                & (consumed.c.type_id == allocated.c.type_id),
+            )
+            .where(
+                TimeOffType.requires_allocation.is_(True),
+                remaining <= LOW_BALANCE_DAYS,
+            )
+            .order_by(remaining)
+            .limit(10)
         ).all()
     ]
 
@@ -357,6 +433,7 @@ def build(
             "approved_days": str(approved_days),
             "pending_requests": pending_requests,
             "by_type": leave_by_type,
+            "low_balances": low_balances,
         },
         "alerts": alerts,
         "salary_cost_by_department": [

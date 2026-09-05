@@ -186,12 +186,19 @@ class WarningOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    payrun_id: int
     code: WarningCode
     severity: WarningSeverity
     message: str
     employee_id: int | None = None
+    employee_name: str | None = None
     payslip_id: int | None = None
     blocks: str | None = None
+    # Warnings are not resolved in place: `compute` clears the payrun's
+    # warnings and regenerates them, so a warning that is still stored is by
+    # definition still open. The field exists because the reader needs to know
+    # that, not because there is a resolution workflow behind it.
+    is_resolved: bool = False
 
 
 class PayslipLineOut(BaseModel):
@@ -252,6 +259,10 @@ class PayslipSummaryOut(BaseModel):
     payable_days: int
     state: PayslipState
     warning_count: int = 0
+    # The cockpit row shows which warnings, not just how many - "2 warnings"
+    # sends the reader hunting, "MISSING_BANK_DETAILS" does not. The full
+    # objects still live on the payrun; these are the codes for the chips.
+    warning_codes: list[WarningCode] = []
 
 
 class PayrunOut(BaseModel):
@@ -281,3 +292,5 @@ class PayrunOut(BaseModel):
 class PayrunDetailOut(PayrunOut):
     payslips: list[PayslipSummaryOut] = []
     warnings: list[WarningOut] = []
+    # Pre-counted by severity so the cockpit header needs no client reduce.
+    warning_counts: dict[str, int] = {}

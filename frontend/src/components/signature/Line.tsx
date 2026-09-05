@@ -23,7 +23,7 @@
  * 2px tick would become 2.7px on a wide screen — the blueprint says 2px.
  */
 import { useEffect, useRef, useState } from "react";
-import { eachDay, monthLabel, monthOf, type ISODate } from "@/mocks/seed/calendar";
+import { eachDay, monthLabel, monthOf, type ISODate } from "@/lib/date";
 import { cx } from "@/components/system/cx";
 import { useScrub } from "./Line.scrub";
 

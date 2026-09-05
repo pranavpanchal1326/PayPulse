@@ -28,7 +28,7 @@ import {
 import { Button, SegmentedControl, Well } from "@/components/system";
 import { Section } from "@/proving/Section";
 import { ATTENDANCE_FROM, ATTENDANCE_TO, CURRENCY, OPEN_PERIOD } from "@/mocks/seed/anchor";
-import { addMonths, monthEnd, monthLabel, monthOf, monthStart, type ISODate } from "@/mocks/seed/calendar";
+import { addMonths, monthEnd, monthLabel, monthOf, monthStart, type ISODate } from "@/lib/date";
 import { contractsCovering } from "@/mocks/seed/contracts";
 import { computePayslip, paiseToString } from "@/mocks/seed/engine";
 import { attendances } from "@/mocks/seed/attendance";
