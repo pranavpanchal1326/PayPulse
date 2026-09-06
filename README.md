@@ -489,6 +489,6 @@ docs/              architecture · API · runbook · images
 
 <div align="center">
 
-**Backend** — *Aditya* · **Frontend** — *Pranav*
+
 
 </div>
