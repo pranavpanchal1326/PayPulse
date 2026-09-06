@@ -9,9 +9,8 @@
 import { api, requestBlob } from "@/api/client";
 import type {
   Department, EligibleEmployee, EligibleEmployeesRequest, Employee, FormulaValidationRequest,
-  FormulaValidationResult, MarkPaidRequest, Page, PayrollWarning, Payrun, PayrunCreate,
-  PayrunDetail, PayrunQuery, Payslip, PayslipDetail, PayslipQuery, SalaryRule,
-  SalaryStructure, SalaryStructureDetail,
+  FormulaValidationResult, MarkPaidRequest, Page, Payrun, PayrunCreate, PayrunDetail,
+  PayrunQuery, PayslipDetail, SalaryRule, SalaryStructure, SalaryStructureDetail,
 } from "@/api/contract";
 
 export const PAGE_SIZE = 200;
@@ -26,9 +25,6 @@ export const getStructure = (id: number) =>
 
 export const createStructure = (patch: Partial<SalaryStructure>) =>
   api.post<SalaryStructure>("/salary-structures", patch);
-
-export const updateStructure = (id: number, patch: Partial<SalaryStructure>) =>
-  api.patch<SalaryStructure>(`/salary-structures/${id}`, patch);
 
 /**
  * The **complete** ordering, never a subset. A request naming half the rules
@@ -78,9 +74,6 @@ export const getPayrun = (id: number) => api.get<PayrunDetail>(`/payruns/${id}`)
 
 export const createPayrun = (body: PayrunCreate) => api.post<PayrunDetail>("/payruns", body);
 
-export const listWarnings = (id: number, severity?: string) =>
-  api.get<PayrollWarning[]>(`/payruns/${id}/warnings`, { severity, page_size: PAGE_SIZE });
-
 /** Idempotent by construction — pressing Compute twice is not a 422. */
 export const computePayrun = (id: number) => api.post<PayrunDetail>(`/payruns/${id}/compute`);
 
@@ -104,9 +97,6 @@ export const sendPayslips = (id: number) =>
   api.post<SendResult>(`/payruns/${id}/send-payslips`);
 
 /* ── Payslips · P11 ───────────────────────────────────────────────────── */
-
-export const listPayslips = (q: PayslipQuery) =>
-  api.get<Page<Payslip>>("/payslips", { ...q, page_size: q.page_size ?? PAGE_SIZE });
 
 export const getPayslip = (id: number) => api.get<PayslipDetail>(`/payslips/${id}`);
 

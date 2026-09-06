@@ -48,7 +48,7 @@ services:
       SMTP_PORT: 1025
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
     ports:
-      - "8000:8000"
+      - "${API_PORT_HOST:-8000}:8000"
     volumes:
       # Bind mount for --reload. The anonymous volume keeps the image's
       # installed egg-info from being shadowed by the host directory.

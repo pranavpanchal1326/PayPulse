@@ -10,13 +10,15 @@
  * it is the confirmation that the thing you just spent came out of the thing
  * you were looking at.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { TimeOffRequest } from "@/api/contract";
 import { ApiError } from "@/api/errors";
 import { useQuery } from "@/api/useQuery";
 import { useAuth } from "@/auth/AuthContext";
-import { Badge, Button, Drawer, Skeleton, StateChip, WarningCard, Well } from "@/components/system";
+import {
+  Badge, Button, Drawer, Skeleton, StateChip, Textarea, WarningCard, Well,
+} from "@/components/system";
 import { Pair, daysLabel, decimalLabel, formatDate } from "@/features/shared";
 import { approveRequest, cancelRequest, getBalances, refuseRequest } from "./api";
 import { BalanceMeter } from "./BalanceMeter";
@@ -33,6 +35,13 @@ export function RequestDrawer({
   const { can } = useAuth();
   const [busy, setBusy] = useState(false);
   const [refusal, setRefusal] = useState<string>();
+  /**
+   * **A refusal has to say why; an approval does not have to.** The asymmetry
+   * is the point — the person told "no" is the one who needs the sentence, and
+   * `decision_note` is where the API has always kept it. Approving with an
+   * empty note stays one click, so the common case is not taxed.
+   */
+  const [note, setNote] = useState("");
 
   const balances = useQuery(
     () => (request ? getBalances(request.employee_id) : Promise.resolve(null)),
@@ -41,12 +50,12 @@ export function RequestDrawer({
 
   const balance = balances.data?.find((b) => b.time_off_type_id === request?.time_off_type_id);
 
-  async function act(run: (id: number) => Promise<unknown>) {
+  async function act(run: (id: number, note?: string) => Promise<unknown>) {
     if (!request) return;
     setRefusal(undefined);
     setBusy(true);
     try {
-      await run(request.id);
+      await run(request.id, note.trim() || undefined);
       balances.reload();
       onActed();
       onClose();
@@ -57,7 +66,14 @@ export function RequestDrawer({
     }
   }
 
+  /** A note belongs to the request it was typed against, not to the drawer. */
+  useEffect(() => {
+    setNote("");
+    setRefusal(undefined);
+  }, [request?.id]);
+
   const canApprove = can("time_off_request", "approve");
+  const refusalNeedsReason = note.trim().length === 0;
   const canCancel = can("time_off_request", "update");
 
   return (
@@ -76,7 +92,13 @@ export function RequestDrawer({
             )}
             {canApprove && request.state === "TO_APPROVE" && (
               <>
-                <Button variant="secondary" loading={busy} onClick={() => act(refuseRequest)}>
+                <Button
+                  variant="secondary"
+                  loading={busy}
+                  disabled={refusalNeedsReason}
+                  title={refusalNeedsReason ? "Give a reason before refusing." : undefined}
+                  onClick={() => act(refuseRequest)}
+                >
                   Refuse
                 </Button>
                 <Button variant="primary" loading={busy} onClick={() => act(approveRequest)}>
@@ -124,8 +146,32 @@ export function RequestDrawer({
                   <Pair k="Counts as" v={daysLabel(request.duration_days)} />
                   <Pair k="Decided by" v={request.approver_name} />
                   <Pair k="Reason" v={request.reason} />
+                  {/* Recorded with the decision, and read back here — a
+                      refusal whose reason lives only in the database is a
+                      refusal nobody can answer. */}
+                  {request.decision_note && (
+                    <Pair k="Decision note" v={request.decision_note} />
+                  )}
                 </div>
               </Well>
+
+              {canApprove && request.state === "TO_APPROVE" && (
+                <div style={{ marginTop: "var(--s-4)" }}>
+                  <Textarea
+                    label="Decision note"
+                    value={note}
+                    rows={2}
+                    maxLength={500}
+                    placeholder="Why this is being refused — or a note to carry with the approval."
+                    onChange={(e) => setNote(e.target.value)}
+                    help={
+                      refusalNeedsReason
+                        ? "Required to refuse. Optional to approve."
+                        : `${500 - note.trim().length} characters left.`
+                    }
+                  />
+                </div>
+              )}
 
               <p className="t-ui-sm pp-lv__explain">
                 The duration is computed from this employee's working schedule

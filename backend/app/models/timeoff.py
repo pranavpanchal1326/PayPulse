@@ -112,8 +112,16 @@ class LeaveAllocation(Base, TimestampMixin):
     )
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Who decided, and why. Mirrors `TimeOffRequest` below: an allocation is
+    # refused by a person for a reason, and both outlive the decision.
+    approver_id: Mapped[int | None] = mapped_column(
+        ForeignKey("app_user.id", ondelete="SET NULL"), nullable=True
+    )
+    decision_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     employee: Mapped[Employee] = relationship(back_populates="allocations")
     time_off_type: Mapped[TimeOffType] = relationship(back_populates="allocations")
+    approver: Mapped[User | None] = relationship()
 
     def covers(self, day: date) -> bool:
         """Whether this allocation is valid on `day`."""

@@ -86,6 +86,9 @@ class LeaveAllocationOut(BaseModel):
     validity_to: date | None = None
     state: RequestState
     notes: str | None = None
+    approver_id: int | None = None
+    approver_name: str | None = None
+    decision_note: str | None = None
 
 
 # --- requests ----------------------------------------------------------
@@ -175,7 +178,6 @@ class BalanceOut(BaseModel):
 
 class LeaveSummary(BaseModel):
     """Approved leave in a period, split paid and unpaid for the pay basis."""
-    """Approved leave in a period, split the way the pay basis needs it."""
 
     employee_id: int
     period_start: date

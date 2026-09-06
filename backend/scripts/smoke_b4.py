@@ -91,10 +91,40 @@ check(alloc["state"] == "DRAFT", "starts DRAFT")
 before = balance_of(hr, eid, "AL")
 check(before["allocated"] == "0.00", "an unapproved allocation grants nothing")
 
-call("POST", f"/time-off/allocations/{alloc['id']}/approve", hr, {})
+decided = call(
+    "POST",
+    f"/time-off/allocations/{alloc['id']}/approve",
+    hr,
+    {"note": "Annual entitlement for 2026."},
+)
 after = balance_of(hr, eid, "AL")
 check(after["allocated"] == "12.00", f"approved -> allocated {after['allocated']}")
 check(after["remaining"] == "12.00", "remaining 12")
+
+# An allocation decision is attributable, the same way a request decision is.
+check(decided["approver_id"] is not None, "the approver is recorded")
+check(
+    decided["decision_note"] == "Annual entitlement for 2026.",
+    "the decision note is stored",
+    decided.get("decision_note") or "none",
+)
+read_back = call("GET", "/time-off/allocations?page_size=200", hr)["items"]
+stored = next(a for a in read_back if a["id"] == alloc["id"])
+check(
+    stored["decision_note"] == "Annual entitlement for 2026."
+    and stored["approver_name"],
+    "and both read back on the list",
+    f"{stored.get('approver_name')}",
+)
+
+# The body stays optional here: callers written before the note existed
+# must keep working.
+check(
+    call("POST", f"/time-off/allocations/{alloc['id']}/approve", hr, {}, expect=409)
+    .get("code")
+    == "already_approved",
+    "a bodyless decision is still accepted, and re-approval conflicts",
+)
 
 print("\nduration is schedule- and holiday-aware")
 # A Friday well in the past, so the request spans Fri-Mon over a weekend.

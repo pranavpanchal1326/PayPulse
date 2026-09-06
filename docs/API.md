@@ -94,14 +94,33 @@ right field rather than only in a toast.
 
 ### Lists
 
-Every collection returns the same page envelope:
+Collections come in **two shapes**, and it matters which one you are calling.
+
+The large, filterable collections are paged:
 
 ```json
 { "items": [], "total": 39, "page": 1, "pages": 1, "page_size": 50 }
 ```
 
-`page` and `page_size` are query params. **`page_size` caps at 200** — asking
-for more is a 422, not a silent clamp.
+`/employees` · `/contracts` · `/attendances` · `/payruns` · `/payslips` ·
+`/time-off/requests` · `/time-off/allocations`
+
+The small reference lists return a **bare JSON array** — there is nothing to
+page, so there is no envelope:
+
+```json
+[ { "id": 1, "name": "Engineering" } ]
+```
+
+`/departments` · `/job-positions` · `/working-schedules` · `/time-off/types` ·
+`/time-off/balances` · `/salary-structures` · `/salary-rules` ·
+`/payruns/{id}/warnings`
+
+Reaching for `.items` on one of those returns `undefined`, and reaching for a
+bare array on a paged one gives you the envelope object. Check the shape.
+
+`page` and `page_size` are query params on the paged ones. **`page_size` caps
+at 200** — asking for more is a 422, not a silent clamp.
 
 ### Money
 

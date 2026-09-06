@@ -21,7 +21,9 @@ import { PageHeader } from "@/app/Shell";
 import { Button, EmptyState, Select, Skeleton, Well } from "@/components/system";
 import { RollingCount } from "@/components/signature";
 import { LoadFailure, SectionNav, useFilterParams } from "@/features/shared";
-import { getBalances, listEmployees } from "./api";
+import { monthEnd, monthLabel, monthStart } from "@/lib/date";
+import { openPeriod } from "@/lib/clock";
+import { getBalances, getLeaveSummary, listEmployees } from "./api";
 import { BalanceMeter, LOW_REMAINING } from "./BalanceMeter";
 import { SECTION_NAV } from "./nav";
 
@@ -49,6 +51,25 @@ export function Balances() {
   const balances = useQuery(
     () => (subject === undefined ? Promise.resolve(null) : getBalances(subject)),
     [subject],
+  );
+
+  /**
+   * A balance says what is *left*; it cannot say what was *taken*, and taken
+   * is the half payroll reads. `/time-off/summary` splits the open period's
+   * approved leave into paid and unpaid — the same split the pay basis uses,
+   * so the two screens cannot disagree.
+   */
+  const period = openPeriod();
+  const summary = useQuery(
+    () =>
+      subject === undefined
+        ? Promise.resolve(undefined)
+        : getLeaveSummary({
+            employee_id: subject,
+            period_start: monthStart(period),
+            period_end: monthEnd(period),
+          }),
+    [subject, period],
   );
 
   const rows: LeaveBalance[] = balances.data ?? [];
@@ -79,6 +100,22 @@ export function Balances() {
       />
 
       <SectionNav items={SECTION_NAV} />
+
+      {/* What was taken, next to what is left. Server-split paid/unpaid. */}
+      {summary.data && (
+        <Well style={{ padding: "var(--s-4) var(--s-5)" }}>
+          <p className="t-micro" style={{ margin: 0, color: "var(--ink-400)" }}>
+            TAKEN IN {monthLabel(period).toUpperCase()}
+          </p>
+          <p className="t-body" style={{ margin: "var(--s-2) 0 0" }}>
+            {summary.data.total_leave_days === 0
+              ? "No approved leave in the open period."
+              : `${summary.data.total_leave_days} approved ${
+                  summary.data.total_leave_days === 1 ? "day" : "days"
+                } — ${summary.data.paid_leave_days} paid, ${summary.data.unpaid_leave_days} unpaid. Unpaid days reduce this period's net.`}
+          </p>
+        </Well>
+      )}
 
       {!self && (
         <div className="pp-filters">

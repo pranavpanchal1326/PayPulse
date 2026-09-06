@@ -44,7 +44,7 @@ import { currentMonth, openPeriod } from "@/lib/clock";
 import {
   LoadFailure, clockOf, decimalLabel, formatDate, useFilterParams,
 } from "@/features/shared";
-import { listAllAttendance, listEmployees } from "./api";
+import { getOverview, listAllAttendance, listEmployees } from "./api";
 import { listSchedules } from "@/features/contracts/api";
 import { MonthStrip } from "./MonthStrip";
 import { Correction } from "./Correction";
@@ -92,6 +92,28 @@ export function Attendance() {
   );
   const employees = useQuery(() => listEmployees(), []);
   const schedules = useQuery(() => listSchedules(), []);
+
+  /**
+   * **Absence is asked for, not counted here.** A day with no row is absent
+   * only relative to the contract's schedule, the holiday calendar and
+   * approved leave — three things this screen does not hold. `/attendances/
+   * overview` holds all three, so the figure comes from the server or it does
+   * not appear at all. Counting missing dates in the browser would produce a
+   * number that disagrees with the payrun, which is worse than no number.
+   *
+   * The route is employee-scoped, so the team view has nothing to ask for.
+   */
+  const overview = useQuery(
+    () =>
+      employeeId === undefined
+        ? Promise.resolve(undefined)
+        : getOverview({
+            employee_id: employeeId,
+            period_start: monthStart(month),
+            period_end: monthEnd(month),
+          }),
+    [month, employeeId, clock.version],
+  );
 
   const all = rows.data ?? [];
   const shown = useMemo(() => (day ? all.filter((r) => r.work_date === day) : all), [all, day]);
@@ -306,6 +328,29 @@ export function Attendance() {
           support="Corrections carry a reason and stay marked."
           loading={rows.initial}
         />
+        {/* Server-computed, and only for one person: see `overview` above. */}
+        {overview.data && (
+          <>
+            <Figure
+              label="ABSENT DAYS"
+              value={overview.data.absent_days}
+              tone={overview.data.absent_days > 0 ? "warn" : "calm"}
+              support={
+                overview.data.absent_days > 0
+                  ? "Scheduled, unattended and not on approved leave — payroll counts these unpaid."
+                  : "Every scheduled day is attended or excused."
+              }
+              loading={overview.initial}
+            />
+            <Figure
+              label="LEAVE DAYS"
+              value={overview.data.paid_leave_days + overview.data.unpaid_leave_days}
+              tone="calm"
+              support={`${overview.data.paid_leave_days} paid · ${overview.data.unpaid_leave_days} unpaid, out of ${overview.data.contract_days} scheduled.`}
+              loading={overview.initial}
+            />
+          </>
+        )}
       </div>
 
       <div className="pp-filters">

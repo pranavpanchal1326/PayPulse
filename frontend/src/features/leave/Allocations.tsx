@@ -14,14 +14,14 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Check, Plus, X } from "lucide-react";
-import type { LeaveAllocation } from "@/api/contract";
+import type { LeaveAllocation, RequestState } from "@/api/contract";
 import { ApiError } from "@/api/errors";
 import { useQuery, useSubmission } from "@/api/useQuery";
 import { useAuth } from "@/auth/AuthContext";
 import { PageHeader } from "@/app/Shell";
 import {
-  Button, Drawer, EmptyState, Field, Select, StateChip, Table, Textarea, WarningCard,
-  useToast, type Column,
+  Button, Drawer, EmptyState, Field, Modal, Select, StateChip, Table, Textarea,
+  Tooltip, WarningCard, useToast, type Column,
 } from "@/components/system";
 import { Segment } from "@/components/signature";
 import { today, yearEnd, yearStart } from "@/lib/clock";
@@ -36,6 +36,13 @@ import { SECTION_NAV } from "./nav";
 
 const YEAR_START = yearStart();
 const YEAR_END = yearEnd();
+
+/**
+ * The states an allocation can still be decided from. `DRAFT` is in here
+ * because allocations have no submit step: the API creates them DRAFT and
+ * `/approve` accepts them straight from there.
+ */
+const PENDING_STATES = new Set<RequestState>(["DRAFT", "TO_APPROVE"]);
 
 export function Allocations() {
   const { can } = useAuth();
@@ -62,11 +69,16 @@ export function Allocations() {
   /** Own-scoped roles see only their own rows; a person picker changes nothing. */
   const self = !can("leave_allocation", "approve");
 
-  async function act(row: LeaveAllocation, run: (id: number) => Promise<unknown>, done: string) {
+  async function act(
+    row: LeaveAllocation,
+    run: (id: number, note?: string) => Promise<unknown>,
+    done: string,
+    note?: string,
+  ) {
     setRefusal(undefined);
     setBusyId(row.id);
     try {
-      await run(row.id);
+      await run(row.id, note);
       toast(done, "jade");
       allocations.reload();
     } catch (cause) {
@@ -75,6 +87,19 @@ export function Allocations() {
       setBusyId(undefined);
     }
   }
+
+  /**
+   * **Refusing asks why; approving does not.** Taking a balance away is the
+   * decision somebody has to be able to answer later, and the API now records
+   * the reason against the allocation. Approving stays a single click, so the
+   * common case is not slowed down to serve the rare one.
+   */
+  const [refusing, setRefusing] = useState<LeaveAllocation>();
+  const [refuseReason, setRefuseReason] = useState("");
+  const closeRefusal = () => {
+    setRefusing(undefined);
+    setRefuseReason("");
+  };
 
   const canApprove = can("leave_allocation", "approve");
 
@@ -135,6 +160,31 @@ export function Allocations() {
         accessorFn: (a) => a.state,
         cell: ({ row }) => <StateChip state={row.original.state} />,
       },
+      {
+        id: "decided",
+        header: "Decided by",
+        enableSorting: false,
+        accessorFn: (a) => a.approver_name ?? "",
+        /* The note is the column's reason for existing: a refused allocation
+           that does not say why is the thing this closes. */
+        cell: ({ row }) => {
+          const a = row.original;
+          if (!a.approver_name) return <span style={{ color: "var(--ink-300)" }}>—</span>;
+          return (
+            <span className="t-ui-sm">
+              {a.decision_note ? (
+                <Tooltip label={a.decision_note}>
+                  <span style={{ borderBottom: "1px dotted var(--ink-300)" }}>
+                    {a.approver_name}
+                  </span>
+                </Tooltip>
+              ) : (
+                a.approver_name
+              )}
+            </span>
+          );
+        },
+      },
       ...(canApprove
         ? [
             {
@@ -142,7 +192,11 @@ export function Allocations() {
               header: "",
               enableSorting: false,
               cell: ({ row }: { row: { original: LeaveAllocation } }) =>
-                row.original.state === "TO_APPROVE" ? (
+                /* An allocation has no `submit` step — it is created DRAFT
+                   and decided from there, which is the two steps the form's
+                   own copy promises. Gating the buttons on TO_APPROVE alone
+                   stranded every allocation made through this screen. */
+                PENDING_STATES.has(row.original.state) ? (
                   <span className="pp-row-actions">
                     <Button
                       size="sm"
@@ -160,7 +214,10 @@ export function Allocations() {
                       variant="quiet"
                       icon={<X size={14} />}
                       loading={busyId === row.original.id}
-                      onClick={() => act(row.original, refuseAllocation, "Allocation refused.")}
+                      onClick={() => {
+                        setRefuseReason("");
+                        setRefusing(row.original);
+                      }}
                     >
                       Refuse
                     </Button>
@@ -175,7 +232,7 @@ export function Allocations() {
   );
 
   const filtered = employeeId !== undefined || typeId !== undefined || state !== undefined;
-  const awaiting = rows.filter((a) => a.state === "TO_APPROVE").length;
+  const awaiting = rows.filter((a) => PENDING_STATES.has(a.state)).length;
 
   return (
     <>
@@ -239,6 +296,7 @@ export function Allocations() {
           onChange={(e) => filters.set("state", e.target.value)}
           options={[
             { value: "", label: "Any state" },
+            { value: "DRAFT", label: "Proposed" },
             { value: "TO_APPROVE", label: "To approve" },
             { value: "APPROVED", label: "Approved" },
             { value: "REFUSED", label: "Refused" },
@@ -283,6 +341,53 @@ export function Allocations() {
           toast("Allocation created — it is live once approved.", "jade");
         }}
       />
+
+      <Modal
+        open={refusing !== undefined}
+        onClose={closeRefusal}
+        title="Refuse this allocation?"
+        description={
+          refusing
+            ? `${refusing.employee_name} would not receive ${decimalLabel(refusing.days)} days of ${refusing.type_name}. The reason is stored against the allocation and shown here afterwards.`
+            : ""
+        }
+        footer={
+          <>
+            <Button variant="quiet" onClick={closeRefusal}>
+              Keep it
+            </Button>
+            <Button
+              variant="danger"
+              loading={refusing !== undefined && busyId === refusing.id}
+              disabled={refuseReason.trim().length === 0}
+              onClick={async () => {
+                const target = refusing;
+                if (!target) return;
+                closeRefusal();
+                await act(
+                  target,
+                  refuseAllocation,
+                  "Allocation refused, with the reason recorded.",
+                  refuseReason.trim(),
+                );
+              }}
+            >
+              Refuse allocation
+            </Button>
+          </>
+        }
+      >
+        <Textarea
+          label="Why is this being refused?"
+          required
+          rows={3}
+          maxLength={500}
+          placeholder="Granted in error — this employee is already covered by the 2026 annual allocation."
+          help="Required. Stored against the allocation, alongside who refused it."
+          value={refuseReason}
+          onChange={(e) => setRefuseReason(e.target.value)}
+        />
+      </Modal>
     </>
   );
 }

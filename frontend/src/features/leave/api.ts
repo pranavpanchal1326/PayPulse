@@ -3,8 +3,8 @@
  */
 import { api } from "@/api/client";
 import type {
-  Employee, LeaveAllocation, LeaveBalance, Page, TimeOffRequest, TimeOffRequestCreate,
-  TimeOffRequestQuery, TimeOffType,
+  Employee, LeaveAllocation, LeaveBalance, LeaveSummary, Page, TimeOffRequest,
+  TimeOffRequestCreate, TimeOffRequestQuery, TimeOffType,
 } from "@/api/contract";
 
 export const PAGE_SIZE = 200;
@@ -40,11 +40,16 @@ export const createAllocation = (patch: {
   notes?: string | null;
 }) => api.post<LeaveAllocation>("/time-off/allocations", patch);
 
-export const approveAllocation = (id: number) =>
-  api.post<LeaveAllocation>(`/time-off/allocations/${id}/approve`);
+/**
+ * The note is optional here and so is the body — the allocation routes accept
+ * a bodyless call on purpose, so older callers keep working. Sending `{ note }`
+ * is simply the richer form of the same request.
+ */
+export const approveAllocation = (id: number, note?: string) =>
+  api.post<LeaveAllocation>(`/time-off/allocations/${id}/approve`, { note: note || null });
 
-export const refuseAllocation = (id: number) =>
-  api.post<LeaveAllocation>(`/time-off/allocations/${id}/refuse`);
+export const refuseAllocation = (id: number, note?: string) =>
+  api.post<LeaveAllocation>(`/time-off/allocations/${id}/refuse`, { note: note || null });
 
 /* ── Balances ─────────────────────────────────────────────────────────── */
 
@@ -58,6 +63,20 @@ export const getBalances = (employeeId: number) =>
 
 /* ── Requests ─────────────────────────────────────────────────────────── */
 
+/**
+ * `GET /time-off/summary` — approved leave in a period, split paid/unpaid.
+ *
+ * Distinct from `/time-off/balances`: a balance is what is *left to take*,
+ * this is what was *actually taken* and therefore what the pay basis reads.
+ * A screen that shows only the balance cannot answer "what did this person
+ * get paid for", which is the question payroll brings to it.
+ */
+export const getLeaveSummary = (q: {
+  employee_id: number;
+  period_start: string;
+  period_end: string;
+}) => api.get<LeaveSummary>("/time-off/summary", q);
+
 export const listRequests = (q: TimeOffRequestQuery) =>
   api.get<Page<TimeOffRequest>>("/time-off/requests", { ...q, page_size: q.page_size ?? PAGE_SIZE });
 
@@ -70,11 +89,17 @@ export const listRequests = (q: TimeOffRequestQuery) =>
 export const createRequest = (patch: TimeOffRequestCreate & { hours?: number }) =>
   api.post<TimeOffRequest>("/time-off/requests", patch);
 
-export const approveRequest = (id: number) =>
-  api.post<TimeOffRequest>(`/time-off/requests/${id}/approve`);
+/**
+ * **The body is not optional.** `DecisionRequest` has one optional field, but
+ * FastAPI still requires the object — posting nothing answers 422 and the
+ * decision silently fails in the drawer. Both send `{ note }` even when the
+ * note is absent, which is what the endpoint has always asked for.
+ */
+export const approveRequest = (id: number, note?: string) =>
+  api.post<TimeOffRequest>(`/time-off/requests/${id}/approve`, { note: note || null });
 
-export const refuseRequest = (id: number) =>
-  api.post<TimeOffRequest>(`/time-off/requests/${id}/refuse`);
+export const refuseRequest = (id: number, note?: string) =>
+  api.post<TimeOffRequest>(`/time-off/requests/${id}/refuse`, { note: note || null });
 
 export const cancelRequest = (id: number) =>
   api.post<TimeOffRequest>(`/time-off/requests/${id}/cancel`);

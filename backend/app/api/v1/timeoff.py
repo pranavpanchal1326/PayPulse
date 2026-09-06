@@ -148,6 +148,9 @@ def _allocation_out(row: LeaveAllocation) -> LeaveAllocationOut:
         validity_to=row.validity_to,
         state=row.state,
         notes=row.notes,
+        approver_id=row.approver_id,
+        approver_name=row.approver.full_name if row.approver else None,
+        decision_note=row.decision_note,
     )
 
 
@@ -205,15 +208,26 @@ def create_allocation(
 
 @router.post("/allocations/{allocation_id}/approve", response_model=LeaveAllocationOut)
 def approve_allocation(
-    allocation_id: int, db: DbSession, _: alloc_approve
+    allocation_id: int,
+    db: DbSession,
+    ctx: alloc_approve,
+    payload: DecisionRequest | None = None,
 ) -> LeaveAllocationOut:
-    """Spec A4: allocations require approval before the balance is available."""
-    row = db.get(LeaveAllocation, allocation_id)
+    """Spec A4: allocations require approval before the balance is available.
+
+    The note is optional and so is the body — unlike the request decisions,
+    which have always required one. Allocations gained their note after
+    clients were already calling this without a body, and answering 422 to a
+    caller that worked yesterday is not an upgrade.
+    """
+    row = db.get(LeaveAllocation, allocation_id, with_for_update=True)
     if row is None:
         raise NotFoundError(f"Allocation {allocation_id} not found")
     if row.state is RequestState.APPROVED:
         raise ConflictError("Already approved", code="already_approved")
     row.state = RequestState.APPROVED
+    row.approver_id = ctx.user.id
+    row.decision_note = payload.note if payload else None
     db.commit()
     db.refresh(row)
     return _allocation_out(row)
@@ -221,12 +235,25 @@ def approve_allocation(
 
 @router.post("/allocations/{allocation_id}/refuse", response_model=LeaveAllocationOut)
 def refuse_allocation(
-    allocation_id: int, db: DbSession, _: alloc_approve
+    allocation_id: int,
+    db: DbSession,
+    ctx: alloc_approve,
+    payload: DecisionRequest | None = None,
 ) -> LeaveAllocationOut:
-    row = db.get(LeaveAllocation, allocation_id)
+    """Refuse a grant, recording who refused it and why.
+
+    Refusing an already-approved allocation retracts a balance that leave may
+    already have been booked against, so it is refused rather than silently
+    reversed — the approved requests have to be dealt with first.
+    """
+    row = db.get(LeaveAllocation, allocation_id, with_for_update=True)
     if row is None:
         raise NotFoundError(f"Allocation {allocation_id} not found")
+    if row.state is RequestState.REFUSED:
+        raise ConflictError("Already refused", code="already_refused")
     row.state = RequestState.REFUSED
+    row.approver_id = ctx.user.id
+    row.decision_note = payload.note if payload else None
     db.commit()
     db.refresh(row)
     return _allocation_out(row)

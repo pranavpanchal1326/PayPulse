@@ -330,6 +330,10 @@ export interface LeaveAllocation {
   validity_to: DateString;
   state: RequestState;
   notes: string | null;
+  approver_id: number | null;
+  approver_name: string | null;
+  /** The approver's note, recorded with the decision. */
+  decision_note: string | null;
 }
 
 /** Half days cover one date; the API refuses a half day over a range. */
@@ -355,6 +359,8 @@ export interface TimeOffRequest {
   reason: string | null;
   approver_id: number | null;
   approver_name: string | null;
+  /** The approver's note, recorded with the decision. */
+  decision_note: string | null;
   decided_at: DateTimeString | null;
 }
 
@@ -688,6 +694,48 @@ export interface AttendanceOverview {
   manual_edits: number;
   /** How much of the schedule is *accounted for*, present or excused. */
   coverage_pct: DecimalString;
+}
+
+/**
+ * `GET /attendances/overview` — the *period* aggregate, and a different shape
+ * from the dashboard's `AttendanceOverview` above.
+ *
+ * It exists because the one figure payroll actually acts on — absence — is
+ * not derivable from the attendance rows. A day with no row is only absent
+ * relative to the contract's schedule, the holiday calendar and approved
+ * leave, and the client holds none of those three. The server does.
+ */
+/** `GET /time-off/summary` — approved leave in a period, as payroll reads it. */
+export interface LeaveSummary {
+  employee_id: number;
+  period_start: string;
+  period_end: string;
+  paid_leave_days: number;
+  unpaid_leave_days: number;
+  total_leave_days: number;
+}
+
+export interface AttendancePeriodOverview {
+  employee_id: number | null;
+  period_start: string;
+  period_end: string;
+  period_days: number;
+  contract_days: number;
+  days_with_records: number;
+  absent_days: number;
+  paid_leave_days: number;
+  unpaid_leave_days: number;
+  attendance_on_leave_days: number;
+  present: number;
+  late: number;
+  overtime_days: number;
+  missing_checkouts: number;
+  manual_edits: number;
+  worked_hours: DecimalString;
+  overtime_hours: DecimalString;
+  coverage_pct: number;
+  present_pct: number;
+  absence_policy: string;
 }
 
 export interface TimeOffOverview {
